@@ -59,8 +59,11 @@
     <span class="who" id="who"></span>
   </header>
 
+  <!-- ============ 読み込み中（連携状態の確認） ============ -->
+  <div id="checking" class="card" style="text-align:center;color:var(--sub)">読み込み中…</div>
+
   <!-- ============ 提案ビュー ============ -->
-  <div id="proposalView">
+  <div id="proposalView" class="hidden">
     <p class="lead">生徒のタイプと次にやることを選ぶと、そのまま送れるメッセージの下書きができます。コピーしてTeachアプリのメッセージに貼って、次回につなげましょう。</p>
     <div class="card">
       <label class="field">① どんな生徒へ？</label>
@@ -213,11 +216,28 @@ function openApp(){
 function showToast(msg){var el=document.getElementById('toast');if(msg)el.textContent=msg;el.classList.add('show');setTimeout(function(){el.classList.remove('show');},1400);}
 
 var liffProfile=null;
-function postGas(payload){
-  try{ fetch(CONFIG.GAS_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload)}); }catch(e){}
+var linked=false, linkedEmail="", GATE=false;
+/* GASへPOST（cors/text-plain＝preflight無しでレスポンスを読める）。失敗時は{ok:false} */
+function gasFetch(payload){
+  return fetch(CONFIG.GAS_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload)})
+    .then(function(r){return r.json();}).catch(function(){return {ok:false};});
 }
 function logUsage(){
-  postGas({ts:new Date().toISOString(),userId:liffProfile?liffProfile.userId:"",displayName:liffProfile?liffProfile.displayName:"",rel:state.rel,type:state.type});
+  gasFetch({action:"log",ts:new Date().toISOString(),userId:liffProfile?liffProfile.userId:"",displayName:liffProfile?liffProfile.displayName:"",rel:state.rel,type:state.type});
+}
+/* checking / proposal / link の3画面を排他表示 */
+function showOnly(id){
+  ['checking','proposalView','linkView'].forEach(function(x){
+    var el=document.getElementById(x); if(el) el.classList.toggle('hidden', x!==id);
+  });
+}
+function showProposal(){ GATE=false; showOnly('proposalView'); document.getElementById('title').textContent='次回提案サジェスト'; }
+function showLink(gate){
+  GATE=!!gate; showOnly('linkView'); document.getElementById('title').textContent='メール連携';
+  var lead=document.querySelector('#linkForm .lead');
+  if(lead) lead.textContent= gate
+    ? '提案文サジェストを使うには、最初にTeachに登録しているメールアドレスで連携してください。連携すると、あなたの授業に合わせた下書きやお知らせが届くようになります。'
+    : 'Teachに登録しているメールアドレスを入力すると、あなたの授業に合わせたお知らせや、次回提案の下書きが受け取れるようになります。';
 }
 
 /* ---- 連携 ---- */
@@ -229,11 +249,21 @@ function submitLink(){
   if(!isEmail(email)){err.textContent="メールアドレスの形式を確認してください。";return;}
   err.textContent="";
   var btn=document.getElementById('submitLink');btn.disabled=true;btn.textContent="連携中…";
-  postGas({action:"link",idToken:idToken,email:email});
-  setTimeout(function(){
-    document.getElementById('linkForm').style.display="none";
-    document.getElementById('linkDone').style.display="block";
-  },700);
+  gasFetch({action:"link",idToken:idToken,email:email}).then(function(res){
+    if(res&&res.ok){
+      linked=true; linkedEmail=email;
+      if(GATE){ showProposal(); showToast("連携しました"); }
+      else{
+        document.getElementById('linkForm').style.display="none";
+        document.getElementById('linkDone').style.display="block";
+      }
+    }else{
+      btn.disabled=false; btn.textContent="連携する";
+      err.textContent=(res&&res.error==='invalid_token')
+        ? "LINEのログイン情報が取得できませんでした。LINEアプリ内のメニューから開いて、もう一度お試しください。"
+        : "連携に失敗しました。メールアドレスをご確認のうえ、少し時間をおいて再度お試しください。";
+    }
+  });
 }
 
 /* ---- 画面切替＆イベント ---- */
@@ -250,24 +280,45 @@ function initLink(){
   document.getElementById('email').addEventListener('keydown',function(e){if(e.key==="Enter")submitLink();});
 }
 
-if(MODE==='link'){
-  document.getElementById('proposalView').classList.add('hidden');
-  document.getElementById('linkView').classList.remove('hidden');
-  document.getElementById('title').textContent='メール連携';
-  initLink();
-}else{
-  initProposal();
+/* ハンドラは両方用意しておく（画面の出し分けは afterStatus で行う） */
+initProposal();
+initLink();
+showOnly('checking');   // 連携状態を確認するまでロック
+
+/* 連携状態の確認が終わったら画面を決める */
+function afterStatus(){
+  if(MODE==='link'){
+    if(linked){
+      showOnly('linkView');
+      document.getElementById('title').textContent='メール連携';
+      document.getElementById('linkForm').style.display='none';
+      var done=document.getElementById('linkDone');
+      done.querySelector('h2').textContent='すでに連携済みです';
+      done.querySelector('p').textContent=linkedEmail?('連携メール：'+linkedEmail):'授業に合わせたお知らせが届きます。';
+      done.style.display='block';
+    }else{
+      showLink(false);   // 通常の連携画面
+    }
+    return;
+  }
+  // 提案モード：連携済みなら提案ツール、未連携なら連携ゲート
+  if(linked){ showProposal(); }
+  else{ showLink(true); }
 }
 
-/* ---- LIFF 初期化 ---- */
+/* ---- LIFF 初期化 ＋ 連携状態チェック ---- */
 (function initLiff(){
-  if(!CONFIG.LIFF_ID||typeof liff==="undefined"){return;}
+  if(!CONFIG.LIFF_ID||typeof liff==="undefined"){ afterStatus(); return; }
   liff.init({liffId:CONFIG.LIFF_ID}).then(function(){
     try{ idToken=liff.getIDToken(); }catch(e){}
     if(liff.getProfile){
       liff.getProfile().then(function(p){liffProfile=p;document.getElementById('who').textContent=p.displayName+" 先生";}).catch(function(){});
     }
-  }).catch(function(){});
+    gasFetch({action:"status",idToken:idToken}).then(function(res){
+      linked=!!(res&&res.linked); linkedEmail=(res&&res.email)||"";
+      afterStatus();
+    });
+  }).catch(function(){ afterStatus(); });
 })();
 </script>
 </body>
