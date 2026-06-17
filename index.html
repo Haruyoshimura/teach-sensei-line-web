@@ -28,6 +28,12 @@
   .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
   .chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 13px;font-size:13px;cursor:pointer;user-select:none;transition:.15s}
   .chip[aria-pressed="true"]{background:var(--chip);border-color:var(--green);color:var(--green-d);font-weight:700}
+  .modeseg{display:flex;gap:8px;margin-bottom:14px}
+  .seg{flex:1;border:1px solid var(--line);background:#fff;border-radius:12px;padding:11px 8px;cursor:pointer;text-align:center;line-height:1.3}
+  .seg b{display:block;font-size:14px;font-weight:700;color:var(--ink)}
+  .seg small{display:block;font-size:11px;color:var(--sub);margin-top:2px}
+  .seg.active{background:var(--chip);border-color:var(--green)}
+  .seg.active b{color:var(--green-d)}
   input[type=text],input[type=email],textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 11px;font-size:15px;font-family:inherit;background:#fff;margin-bottom:12px}
   .btn{width:100%;border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;cursor:pointer}
   .btn.primary{background:var(--green);color:#fff}
@@ -64,26 +70,32 @@
 
   <!-- ============ 提案ビュー ============ -->
   <div id="proposalView" class="hidden">
-    <p class="lead">生徒のタイプと次にやることを選ぶと、そのまま送れるメッセージの下書きができます。コピーしてTeachアプリのメッセージに貼って、次回につなげましょう。</p>
+    <p class="lead">送る相手を選ぶと、そのまま送れるメッセージの下書きができます。コピーしてTeachアプリのメッセージへ。</p>
+    <div class="modeseg" id="modeToggle">
+      <button class="seg active" type="button" data-mode="proposal"><b>次回の提案</b><small>教えている生徒へ</small></button>
+      <button class="seg" type="button" data-mode="offer"><b>はじめてのオファー</b><small>これからの生徒へ</small></button>
+    </div>
     <div class="card hidden" id="recents">
       <label class="field">最近の生徒 <span class="hint">タップで生徒名・前回内容を自動入力</span></label>
       <div class="chips" id="recentChips"></div>
     </div>
     <div class="card">
-      <label class="field">① どんな生徒へ？</label>
+      <label class="field" id="relLabel">① どの生徒へ？</label>
       <div class="chips" id="rel">
-        <span class="chip" data-v="recent" aria-pressed="true">最近指導した生徒</span>
-        <span class="chip" data-v="gap">しばらく予約が空いている生徒</span>
-        <span class="chip" data-v="favorite">お気に入りされた生徒（オファー）</span>
-        <span class="chip" data-v="offer">はじめての生徒へオファー</span>
+        <span class="chip" data-v="recent" data-mode="proposal" aria-pressed="true">最近指導した生徒</span>
+        <span class="chip" data-v="gap" data-mode="proposal">しばらく予約が空いている生徒</span>
+        <span class="chip" data-v="favorite" data-mode="offer">お気に入りしてくれた生徒へ</span>
+        <span class="chip" data-v="offer" data-mode="offer">はじめての生徒へ</span>
       </div>
-      <label class="field">② 次の提案タイプ <span class="hint">予約につながりやすい型</span></label>
-      <div class="chips" id="type">
-        <span class="chip" data-v="continue" aria-pressed="true">単元の続き</span>
-        <span class="chip" data-v="review">前回の復習</span>
-        <span class="chip" data-v="schedule">日程を提示</span>
-        <span class="chip" data-v="exam">テスト・行事対策</span>
-        <span class="chip" data-v="weak">苦手分野の集中</span>
+      <div id="typeBlock">
+        <label class="field">② 次の提案タイプ <span class="hint">予約につながりやすい型</span></label>
+        <div class="chips" id="type">
+          <span class="chip" data-v="continue" aria-pressed="true">単元の続き</span>
+          <span class="chip" data-v="review">前回の復習</span>
+          <span class="chip" data-v="schedule">日程を提示</span>
+          <span class="chip" data-v="exam">テスト・行事対策</span>
+          <span class="chip" data-v="weak">苦手分野の集中</span>
+        </div>
       </div>
     </div>
     <div class="card">
@@ -182,7 +194,7 @@ function cta(type, date){
            : "ご都合の良いタイミングを教えていただければ、それに合わせて日程を調整します。";
 }
 var CLOSERS = ["無理のない範囲で、気軽にお返事ください。","引き続き、しっかりサポートしていきますね。","一緒に進めていけたら嬉しいです。"];
-var state = { rel:"recent", type:"continue", closer:0 };
+var state = { rel:"recent", type:"continue", closer:0, mode:"proposal" };
 
 /* 呼び捨て防止：敬称が無ければ自動で「さん」を付ける（さん/くん/君/ちゃん/様/さま 等は尊重） */
 function withHonorific(raw){
@@ -237,16 +249,17 @@ function logUsage(){
   gasFetch({action:"log",ts:new Date().toISOString(),userId:liffProfile?liffProfile.userId:"",displayName:liffProfile?liffProfile.displayName:"",rel:state.rel,type:state.type});
 }
 /* 最近の生徒チップ（自動入力）。連携済みのとき1回だけ取得 */
-var recentsLoaded=false;
+var recentsLoaded=false, recentsHasData=false;
 function loadRecents(){
   if(recentsLoaded || !idToken) return;
   recentsLoaded=true;
   var box=document.getElementById('recents'), wrap=document.getElementById('recentChips');
   // 取得前に「読み込み中」を表示（待たずに手入力し始めるのを防ぐ）
   wrap.innerHTML='<span style="font-size:12px;color:var(--sub)">最近の生徒を読み込み中… 少し待つとタップで自動入力できます</span>';
-  box.classList.remove('hidden');
+  if(state.mode==='proposal') box.classList.remove('hidden');
   gasFetch({action:"lessons",idToken:idToken}).then(function(res){
     if(!res||!res.lessons||!res.lessons.length){ box.classList.add('hidden'); return; }
+    recentsHasData=true;
     wrap.innerHTML="";
     res.lessons.forEach(function(L){
       var chip=document.createElement('span');
@@ -261,8 +274,31 @@ function loadRecents(){
       });
       wrap.appendChild(chip);
     });
-    box.classList.remove('hidden');
+    if(state.mode==='proposal') box.classList.remove('hidden'); else box.classList.add('hidden');
   });
+}
+/* つくるもの（次回提案／はじめてのオファー）で欄を出し分け */
+function applyMode(mode){
+  state.mode=mode;
+  var isOffer=(mode==='offer');
+  document.querySelectorAll('#modeToggle .seg').forEach(function(b){ b.classList.toggle('active', b.dataset.mode===mode); });
+  // ①チップを出し分け、先頭をデフォルト選択に
+  var first=null;
+  document.querySelectorAll('#rel .chip').forEach(function(c){
+    var show=(c.dataset.mode===mode);
+    c.style.display=show?'':'none';
+    c.setAttribute('aria-pressed','false');
+    if(show && !first) first=c;
+  });
+  if(first){ first.setAttribute('aria-pressed','true'); state.rel=first.dataset.v; }
+  document.getElementById('relLabel').textContent = isOffer ? '① どんなオファー？' : '① どの生徒へ？';
+  document.getElementById('typeBlock').style.display = isOffer ? 'none' : '';
+  document.getElementById('prev').style.display = isOffer ? 'none' : '';
+  document.getElementById('next').placeholder = isOffer ? '提案する科目・内容（例：英語の長文読解）' : '次回やる内容（例：二次方程式の解き方）';
+  document.getElementById('name').placeholder = isOffer ? '生徒の呼び名（任意・自動で「さん」）' : '生徒の呼び名（例：ゆうと）※自動で「さん」が付きます';
+  var rec=document.getElementById('recents');
+  if(isOffer) rec.classList.add('hidden');
+  else if(recentsHasData) rec.classList.remove('hidden');
 }
 /* checking / proposal / link の3画面を排他表示 */
 function showOnly(id){
@@ -310,6 +346,8 @@ function submitLink(){
 /* ---- 画面切替＆イベント ---- */
 function initProposal(){
   bindChips('rel','rel');bindChips('type','type');
+  document.querySelectorAll('#modeToggle .seg').forEach(function(b){ b.addEventListener('click',function(){ applyMode(b.dataset.mode); }); });
+  applyMode('proposal');
   document.getElementById('gen').addEventListener('click',function(){state.closer=0;render();logUsage();});
   document.getElementById('regen').addEventListener('click',function(){state.closer++;render();});
   document.getElementById('copy').addEventListener('click',function(){copyText().then(function(ok){if(ok)showToast("コピーしました");});});
