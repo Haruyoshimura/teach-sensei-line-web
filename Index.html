@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<!--
+  Teach 先生向け公式LINE｜提案文サジェスト（LIFF）
+  - このファイルは2役を兼ねます:
+    1) ブラウザで直接開くと「単体プレビュー」として動作（LIFF無しでも生成・コピー可）
+    2) GASプロジェクトに「Index.html」として貼ると LIFF アプリとして配信可能
+  - 下の CONFIG を編集してから配信してください。
+-->
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>次回提案サジェスト｜Teach先生サポート</title>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<style>
+  :root{
+    --green:#1fb24a; --green-d:#159a3d; --ink:#222; --sub:#6b7280;
+    --line:#e5e7eb; --bg:#f6f7f9; --card:#fff; --chip:#eef7f0;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+    color:var(--ink);background:var(--bg);line-height:1.7;-webkit-text-size-adjust:100%}
+  .wrap{max-width:560px;margin:0 auto;padding:16px 14px 40px}
+  header{display:flex;align-items:center;gap:8px;margin:4px 2px 14px}
+  header .dot{width:10px;height:10px;border-radius:50%;background:var(--green)}
+  header h1{font-size:17px;margin:0;font-weight:700}
+  header .who{margin-left:auto;font-size:12px;color:var(--sub)}
+  .lead{font-size:13px;color:var(--sub);margin:0 2px 14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px}
+  label.field{display:block;font-size:13px;font-weight:700;margin:0 0 6px}
+  .hint{font-size:12px;color:var(--sub);font-weight:400;margin-left:6px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+  .chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 13px;font-size:13px;
+    cursor:pointer;user-select:none;transition:.15s}
+  .chip[aria-pressed="true"]{background:var(--chip);border-color:var(--green);color:var(--green-d);font-weight:700}
+  input[type=text],textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 11px;
+    font-size:15px;font-family:inherit;background:#fff;margin-bottom:12px}
+  textarea{resize:vertical;min-height:60px}
+  .row{display:flex;gap:10px}
+  .row>div{flex:1}
+  .btn{width:100%;border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;cursor:pointer}
+  .btn.primary{background:var(--green);color:#fff}
+  .btn.primary:active{background:var(--green-d)}
+  .btn.ghost{background:#fff;border:1px solid var(--line);color:var(--ink);font-size:14px;padding:11px}
+  textarea.out{width:100%;background:#fbfdfb;border:1px solid var(--green);border-radius:12px;
+    padding:13px;font-size:15px;line-height:1.7;margin-bottom:6px;min-height:150px;resize:vertical;
+    font-family:inherit;color:var(--ink)}
+  textarea.out::placeholder{color:var(--sub)}
+  .editnote{font-size:12px;color:var(--green-d);margin:0 2px 10px}
+  .actions{display:flex;gap:10px}
+  .actions .btn{flex:1}
+  .tip{font-size:12px;color:var(--sub);background:#fff;border:1px dashed var(--line);
+    border-radius:10px;padding:10px 12px;margin-top:6px}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#222;color:#fff;
+    padding:10px 18px;border-radius:999px;font-size:14px;opacity:0;transition:.25s;pointer-events:none}
+  .toast.show{opacity:1}
+  .foot{font-size:11px;color:var(--sub);text-align:center;margin-top:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="dot"></span>
+    <h1>次回提案サジェスト</h1>
+    <span class="who" id="who"></span>
+  </header>
+  <p class="lead">生徒のタイプと次にやることを選ぶと、そのまま送れるメッセージの下書きができます。コピーしてTeachアプリのメッセージに貼って、次回につなげましょう。</p>
+
+  <!-- 1) 状況 -->
+  <div class="card">
+    <label class="field">① どんな生徒へ？</label>
+    <div class="chips" id="rel">
+      <span class="chip" data-v="recent" aria-pressed="true">最近指導した生徒</span>
+      <span class="chip" data-v="gap">しばらく予約が空いている生徒</span>
+      <span class="chip" data-v="favorite">お気に入りされた生徒（オファー）</span>
+      <span class="chip" data-v="offer">はじめての生徒へオファー</span>
+    </div>
+    <label class="field">② 次の提案タイプ <span class="hint">予約につながりやすい型</span></label>
+    <div class="chips" id="type">
+      <span class="chip" data-v="continue" aria-pressed="true">単元の続き</span>
+      <span class="chip" data-v="review">前回の復習</span>
+      <span class="chip" data-v="schedule">日程を提示</span>
+      <span class="chip" data-v="exam">テスト・行事対策</span>
+      <span class="chip" data-v="weak">苦手分野の集中</span>
+    </div>
+  </div>
+
+  <!-- 2) 具体情報 -->
+  <div class="card">
+    <label class="field">③ ひとことメモ <span class="hint">任意・具体的なほど良い文になります</span></label>
+    <input type="text" id="name" placeholder="生徒の呼び名（例：ゆうとさん）" />
+    <input type="text" id="prev" placeholder="前回やった内容（例：二次関数のグラフ）" />
+    <input type="text" id="next" placeholder="次回やる内容（例：二次方程式の解き方）" />
+    <input type="text" id="date" placeholder="候補日時（例：今週木曜20時〜）※日程提示のとき" />
+  </div>
+
+  <button class="btn primary" id="gen">提案文をつくる</button>
+
+  <!-- 3) 出力 -->
+  <div class="card" style="margin-top:14px">
+    <label class="field">メッセージの下書き <span class="hint">そのまま編集できます</span></label>
+    <textarea class="out" id="out" placeholder="「提案文をつくる」を押すと、ここに下書きが出ます。"></textarea>
+    <p class="editnote">✏️ コピーする前に、一言だけ自分の言葉に変えてから送るのがおすすめです。そのままだと少し機械的に見えることがあります。</p>
+    <button class="btn primary" id="copyopen" style="margin-bottom:10px">コピーしてアプリで送る</button>
+    <div class="actions">
+      <button class="btn ghost" id="copy">コピーのみ</button>
+      <button class="btn ghost" id="regen">別の言い回し</button>
+    </div>
+    <div class="tip" id="tip">💡 ヒント：次回やる内容を具体的に書くほど予約につながりやすくなります。「また連絡します」より「次は◯◯を、◯日に」。</div>
+  </div>
+
+  <p class="foot">Teach 先生サポート ／ 試作版</p>
+</div>
+<div class="toast" id="toast">コピーしました</div>
+
+<script>
+/* ====================== CONFIG（配信前に編集） ====================== */
+var CONFIG = {
+  LIFF_ID: "2010398006-SDXQ8ym3",   // 先生OA(@010agtqv)のログインチャネル「Teach先生サポート」のLIFF
+  GAS_LOG_URL: "https://script.google.com/macros/s/AKfycbznPmaIRyDocseKbIumawcfa1Z5kwYKOc6lepPpgITwVpYP3sAAUnAMoShyf1BJLsP1FA/exec",
+  APP_LINK: "https://teach.go.link?adj_t=21tw2jal"  // Teachアプリを開くリンク。空なら「アプリで送る」ボタンは非表示
+};
+/* ================================================================= */
+
+/* ---- 文面テンプレート ---- */
+var GREET = {
+  recent:   function(n){ return n+"先日は授業、おつかれさまでした。"; },
+  gap:      function(n){ return n+"しばらく授業が空いてしまいましたが、その後いかがでしょうか。"; },
+  favorite: function(n){ return n+"お気に入りに登録してくれてありがとうございます。"; },
+  offer:    function(n){ return n+"はじめまして。プロフィールを見て、よければ一度ご一緒できたらと思いご連絡しました。"; }
+};
+
+/* オファー（まだ予約のない生徒）向けの本文。「次回」「続き」を使わない初回提案の言い回し */
+function offerBody(next){
+  return next
+    ? "もしよければ、"+next+"を中心に、一緒に勉強を進めてみませんか。目標やペースに合わせて進めます。"
+    : "もしよければ、一度一緒に勉強してみませんか。今つまずいているところや目標に合わせて進めます。";
+}
+
+function body(type, prev, next){
+  var p = prev ? "前回は"+prev+"に取り組みましたね。" : "";
+  var n = next || "次のステップ";
+  switch(type){
+    case "continue":
+      return p+"次回は、その続きとして"+n+"を一緒に進めたいと思います。";
+    case "review":
+      return p+"定着させるために、次回は"+n+"を復習しながら、もう一段深めていきましょう。";
+    case "schedule":
+      return (prev? p:"")+"次回は"+n+"を予定しています。";
+    case "exam":
+      return p+n+"に向けて、次回はそこを集中的に対策していきましょう。残りの日数から逆算して進めます。";
+    case "weak":
+      return (prev? "前回"+prev+"を見て、":"")+n+"を重点的にやると一気に楽になりそうだと感じました。次回はそこに絞って取り組みませんか。";
+  }
+  return "";
+}
+
+function cta(type, date){
+  var d = date || "";
+  if(type==="schedule"){
+    return d ? "直近だと"+d+"が空いていますので、よければこのあたりで進めませんか。難しければ別の候補もお出しします。"
+             : "ご都合の良い日程をいくつか教えていただければ、こちらで枠を確保します。";
+  }
+  return d ? d+"あたりで一度いかがでしょうか。ご都合に合わせて調整します。"
+           : "ご都合の良いタイミングを教えていただければ、それに合わせて日程を調整します。";
+}
+
+var CLOSERS = [
+  "無理のない範囲で、気軽にお返事ください。",
+  "引き続き、しっかりサポートしていきますね。",
+  "一緒に進めていけたら嬉しいです。"
+];
+
+var state = { rel:"recent", type:"continue", closer:0 };
+
+function buildText(){
+  var name = (document.getElementById('name').value || "").trim();
+  var n = name ? name+"、" : "";
+  var prev = (document.getElementById('prev').value||"").trim();
+  var next = (document.getElementById('next').value||"").trim();
+  var date = (document.getElementById('date').value||"").trim();
+  var isOffer = (state.rel==='favorite' || state.rel==='offer');
+  var bodyText = isOffer ? offerBody(next) : body(state.type, prev, next);
+  var parts = [
+    GREET[state.rel](n),
+    bodyText,
+    cta(state.type, date),
+    CLOSERS[state.closer % CLOSERS.length]
+  ];
+  return parts.filter(Boolean).join("\n");
+}
+
+/* ---- チップ選択 ---- */
+function bindChips(groupId, key){
+  var g = document.getElementById(groupId);
+  g.querySelectorAll('.chip').forEach(function(c){
+    c.addEventListener('click', function(){
+      g.querySelectorAll('.chip').forEach(function(x){x.setAttribute('aria-pressed','false');});
+      c.setAttribute('aria-pressed','true');
+      state[key] = c.dataset.v;
+    });
+  });
+}
+bindChips('rel','rel');
+bindChips('type','type');
+
+/* ---- 生成 ---- */
+function render(){
+  document.getElementById('out').value = buildText();
+}
+document.getElementById('gen').addEventListener('click', function(){
+  state.closer = 0; render(); logUsage();
+});
+document.getElementById('regen').addEventListener('click', function(){
+  state.closer++; render();
+});
+
+/* ---- コピー ---- */
+function currentText(){
+  return (document.getElementById('out').value || "").trim();
+}
+function copyText(){
+  return new Promise(function(resolve){
+    var t=currentText(); if(!t){ resolve(false); return; }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(t).then(function(){resolve(true);}).catch(fallback);
+    } else { fallback(); }
+    function fallback(){
+      var ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta);
+      ta.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(ta); resolve(true);
+    }
+  });
+}
+function openApp(){
+  if(!CONFIG.APP_LINK) return;
+  try{
+    if(typeof liff!=="undefined" && liff.openWindow){ liff.openWindow({url:CONFIG.APP_LINK, external:true}); }
+    else { window.open(CONFIG.APP_LINK, "_blank"); }
+  }catch(e){ window.open(CONFIG.APP_LINK, "_blank"); }
+}
+document.getElementById('copy').addEventListener('click', function(){
+  copyText().then(function(ok){ if(ok) showToast("コピーしました"); });
+});
+document.getElementById('copyopen').addEventListener('click', function(){
+  copyText().then(function(ok){
+    if(!ok) return;
+    showToast("コピーしました。アプリを開きます");
+    setTimeout(openApp, 600);
+  });
+});
+function showToast(msg){
+  var el=document.getElementById('toast');
+  if(msg) el.textContent=msg;
+  el.classList.add('show');
+  setTimeout(function(){el.classList.remove('show');},1400);
+}
+
+/* ---- 利用ログ（任意・GASへ） ---- */
+var liffProfile = null;
+function logUsage(){
+  if(!CONFIG.GAS_LOG_URL) return;
+  try{
+    var payload = {
+      ts: new Date().toISOString(),
+      userId: liffProfile ? liffProfile.userId : "",
+      displayName: liffProfile ? liffProfile.displayName : "",
+      rel: state.rel, type: state.type
+    };
+    fetch(CONFIG.GAS_LOG_URL, {method:"POST", mode:"no-cors",
+      headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify(payload)});
+  }catch(e){}
+}
+
+/* ---- APP_LINK 未設定なら「アプリで送る」を隠す ---- */
+if(!CONFIG.APP_LINK){
+  var co=document.getElementById('copyopen'); if(co) co.style.display='none';
+  var c2=document.getElementById('copy'); if(c2){ c2.classList.remove('ghost'); c2.classList.add('primary'); c2.textContent='コピー'; }
+}
+
+/* ---- LIFF 初期化（無ければスキップ） ---- */
+(function initLiff(){
+  if(!CONFIG.LIFF_ID || typeof liff==="undefined"){ return; }
+  liff.init({liffId: CONFIG.LIFF_ID}).then(function(){
+    if(liff.isLoggedIn && liff.getProfile){
+      return liff.getProfile().then(function(p){
+        liffProfile = p;
+        document.getElementById('who').textContent = p.displayName + " 先生";
+      });
+    }
+  }).catch(function(e){ /* 単体プレビュー時は無視 */ });
+})();
+</script>
+</body>
+</html>
