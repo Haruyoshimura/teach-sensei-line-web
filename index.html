@@ -241,9 +241,12 @@ var recentsLoaded=false;
 function loadRecents(){
   if(recentsLoaded || !idToken) return;
   recentsLoaded=true;
+  var box=document.getElementById('recents'), wrap=document.getElementById('recentChips');
+  // 取得前に「読み込み中」を表示（待たずに手入力し始めるのを防ぐ）
+  wrap.innerHTML='<span style="font-size:12px;color:var(--sub)">最近の生徒を読み込み中… 少し待つとタップで自動入力できます</span>';
+  box.classList.remove('hidden');
   gasFetch({action:"lessons",idToken:idToken}).then(function(res){
-    if(!res||!res.lessons||!res.lessons.length) return;
-    var box=document.getElementById('recents'), wrap=document.getElementById('recentChips');
+    if(!res||!res.lessons||!res.lessons.length){ box.classList.add('hidden'); return; }
     wrap.innerHTML="";
     res.lessons.forEach(function(L){
       var chip=document.createElement('span');
