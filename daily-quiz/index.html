@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>今日の1問 | Teach</title>
+<style>
+  :root{
+    --bg:#f5f7f8; --card:#fff; --ink:#16232b; --sub:#6b7c86; --line:#e4eaed;
+    --brand:#0f9b8e; --brand-d:#0b7d72; --brand-l:#e6f5f3;
+    --warn:#e8834a; --warn-l:#fdf0e8; --ng:#d95a5a; --ng-l:#fdeded; --radius:16px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{background:#dfe5e8;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;color:var(--ink);display:flex;justify-content:center}
+  #frame{width:100%;max-width:420px;min-height:100vh;background:var(--bg);position:relative;overflow:hidden;box-shadow:0 0 40px rgba(0,0,0,.12)}
+  header{position:sticky;top:0;z-index:20;background:rgba(245,247,248,.92);backdrop-filter:saturate(1.4) blur(8px);border-bottom:1px solid var(--line);padding:12px 16px 10px;display:flex;align-items:center;justify-content:space-between}
+  .logo{font-size:15px;font-weight:800}
+  .logo span{color:var(--brand)}
+  .streak{display:flex;align-items:center;gap:5px;background:var(--warn-l);color:#c25f26;font-size:13px;font-weight:800;padding:5px 11px;border-radius:999px}
+  main{padding:16px 16px 96px}
+  .card{background:var(--card);border-radius:var(--radius);padding:18px;margin-bottom:14px;box-shadow:0 1px 2px rgba(20,40,50,.05)}
+  .eyebrow{font-size:11px;font-weight:800;color:var(--brand);letter-spacing:.08em;margin-bottom:8px}
+  .tag{display:inline-block;font-size:11px;font-weight:700;background:#eef2f4;color:var(--sub);padding:3px 9px;border-radius:6px;margin-right:6px}
+  .qtext{font-size:17px;line-height:1.6;font-weight:700;margin:12px 0 16px}
+  .timer{font-size:11px;color:var(--sub);font-weight:700}
+  .choices{display:flex;flex-direction:column;gap:9px}
+  .choice{display:flex;align-items:center;gap:11px;border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:13px 14px;font-size:15px;font-weight:600;text-align:left;cursor:pointer;transition:.15s;width:100%;color:var(--ink);font-family:inherit}
+  .choice:active{transform:scale(.985)}
+  .choice .mark{width:24px;height:24px;flex:0 0 24px;border-radius:7px;background:#f0f3f5;color:var(--sub);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800}
+  .choice.correct{border-color:var(--brand);background:var(--brand-l)}
+  .choice.correct .mark{background:var(--brand);color:#fff}
+  .choice.wrong{border-color:var(--ng);background:var(--ng-l)}
+  .choice.wrong .mark{background:var(--ng);color:#fff}
+  .choice.dim{opacity:.45}
+  .choice[disabled]{cursor:default}
+  .pct{margin-left:auto;font-size:11px;font-weight:800;color:var(--sub);white-space:nowrap}
+  .verdict{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:800;margin-bottom:10px}
+  .verdict.ok{color:var(--brand-d)} .verdict.ng{color:var(--ng)}
+  .dist{margin:14px 0 4px}
+  .dist .row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px;color:var(--sub)}
+  .bar{flex:1;height:7px;background:#eef2f4;border-radius:99px;overflow:hidden}
+  .bar i{display:block;height:100%;background:#c3d3d8;border-radius:99px}
+  .bar i.me{background:var(--brand)}
+  .teacher{display:flex;gap:11px;align-items:flex-start;background:var(--brand-l);border-radius:12px;padding:13px;margin-top:14px}
+  .avatar{width:38px;height:38px;flex:0 0 38px;border-radius:50%;background:linear-gradient(135deg,#7fd3c9,#0f9b8e);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px}
+  .teacher .name{font-size:12px;font-weight:800;color:var(--brand-d);margin-bottom:3px}
+  .teacher .msg{font-size:13.5px;line-height:1.65}
+  .btn{display:block;width:100%;border:0;border-radius:12px;padding:14px;font-size:15px;font-weight:800;font-family:inherit;cursor:pointer;transition:.15s}
+  .btn.primary{background:var(--brand);color:#fff}
+  .btn.primary:active{background:var(--brand-d)}
+  .btn.ghost{background:#fff;color:var(--sub);border:1.5px solid var(--line)}
+  .btn+.btn{margin-top:9px}
+  .bignum{font-size:44px;font-weight:900;line-height:1;letter-spacing:-.02em}
+  .bignum small{font-size:15px;font-weight:800;margin-left:3px;color:var(--sub)}
+  .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:14px}
+  .cal div{aspect-ratio:1;border-radius:8px;background:#eef2f4;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#b6c3c9}
+  .cal div.on{background:var(--brand);color:#fff}
+  .cal div.today{outline:2px solid var(--warn);outline-offset:1px}
+  .unit{margin-bottom:13px}
+  .unit .top{display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-bottom:5px}
+  .unit .top em{font-style:normal;color:var(--sub);font-weight:700}
+  .unit .weak{color:var(--warn)}
+  .note{font-size:11.5px;color:var(--sub);line-height:1.6;margin-top:10px}
+  /* 設計意図の注記。既定では出さず、?review=1 の時だけ表示する */
+  .review-only{display:none}
+  body.review .review-only{display:block}
+  body.review span.review-only{display:inline}
+  .locked{background:#f7f9fa;border:1px dashed #cfdadf;border-radius:12px;padding:14px;text-align:center}
+  .locked .t{font-size:13px;font-weight:800;color:var(--sub);margin-bottom:4px}
+  .locked .s{font-size:11.5px;color:#93a4ac;line-height:1.6}
+  .scale{display:flex;justify-content:space-between;font-size:10px;color:#a5b3ba;font-weight:700}
+  .curve{position:relative;height:84px;margin:20px 0 6px}
+  .curve svg{width:100%;height:84px;display:block}
+  .curve .you{position:absolute;bottom:0;width:2.5px;height:84px;background:var(--warn);border-radius:2px;transition:left .5s}
+  .curve .lbl{position:absolute;top:-14px;transform:translateX(-50%);font-size:10.5px;font-weight:800;color:var(--warn);white-space:nowrap;transition:left .5s}
+  .peer{display:flex;gap:10px;align-items:center;background:var(--brand-l);border-radius:10px;padding:11px 13px;margin-top:14px;font-size:12.5px;line-height:1.6;color:var(--brand-d);font-weight:600}
+  .offer{border:1.5px solid var(--brand);background:#fff}
+  .offer .head{font-size:13px;font-weight:800;color:var(--brand-d);margin-bottom:10px}
+  .tcard{display:flex;gap:12px;align-items:center;margin:12px 0}
+  .tcard .avatar{width:52px;height:52px;flex:0 0 52px;font-size:17px}
+  .tcard .n{font-size:15px;font-weight:800}
+  .tcard .d{font-size:11.5px;color:var(--sub);line-height:1.55;margin-top:3px}
+  .chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+  .chip{font-size:10.5px;font-weight:700;background:var(--brand-l);color:var(--brand-d);padding:3px 8px;border-radius:6px}
+  nav{position:fixed;bottom:0;width:100%;max-width:420px;background:rgba(255,255,255,.96);backdrop-filter:blur(8px);border-top:1px solid var(--line);display:flex;padding:8px 0 max(8px,env(safe-area-inset-bottom))}
+  nav button{flex:1;border:0;background:none;font-family:inherit;font-size:10.5px;font-weight:800;color:#a5b3ba;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px}
+  nav button.active{color:var(--brand)}
+  nav .ico{font-size:19px;line-height:1}
+  #demo{position:fixed;top:0;left:50%;transform:translateX(-50%);max-width:420px;width:100%;z-index:60;background:#16232b;color:#9fb3bc;font-size:10.5px;padding:6px 10px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  #demo b{color:#fff}
+  #demo button{background:#2a3d47;color:#dbe6ea;border:0;border-radius:6px;padding:4px 8px;font-size:10.5px;font-weight:700;cursor:pointer;font-family:inherit}
+  #demo button:hover{background:#3a5462}
+  .hidden{display:none!important}
+  .fade{animation:f .28s ease}
+  @keyframes f{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .err{background:var(--ng-l);color:#a33;font-size:12px;padding:10px 13px;border-radius:10px;margin-bottom:12px;line-height:1.6}
+</style>
+</head>
+<body>
+<div id="frame">
+
+  <div id="demo">
+    <b>DEMO</b>
+    <button onclick="D.reset()">最初から</button>
+    <button onclick="D.next()">次の問題</button>
+    <button onclick="D.forceWrong()">同じ単元でもう1回ミス</button>
+    <button onclick="D.toggleN()">母数N切替</button>
+    <button onclick="D.setTier('hi')">上位</button>
+    <button onclick="D.setTier('mid')">中位</button>
+    <button onclick="D.setTier('lo')">下位</button>
+    <span id="demoState"></span>
+  </div>
+
+  <header>
+    <div class="logo">Teach <span>今日の1問</span></div>
+    <div class="streak">🔥 <span id="streakNum">–</span>日連続</div>
+  </header>
+
+  <main>
+    <div id="errBox"></div>
+
+    <!-- ========== 今日 ========== -->
+    <section id="tab-today">
+      <div class="card" id="qcard">
+        <div class="eyebrow" id="qdate">読み込み中…</div>
+        <div>
+          <span class="tag" id="qsubj">–</span>
+          <span class="tag" id="qunit">–</span>
+          <span class="timer">目安 30秒</span>
+        </div>
+        <div class="qtext" id="qtext"></div>
+        <div class="choices" id="choices"></div>
+      </div>
+
+      <div class="card hidden" id="rcard">
+        <div class="verdict" id="verdict"></div>
+        <div style="font-size:13.5px;line-height:1.7;color:#33474f" id="explain"></div>
+        <div class="dist">
+          <div style="font-size:11px;font-weight:800;color:var(--sub);margin-bottom:8px" id="distHead">みんなの解答</div>
+          <div id="distRows"></div>
+        </div>
+        <div class="teacher">
+          <div class="avatar" id="tAv">–</div>
+          <div>
+            <div class="name" id="tName"></div>
+            <div class="msg" id="tMsg"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card offer hidden" id="offer">
+        <div class="head" id="offerHead">💡 この単元、続けてつまずいてるみたい</div>
+        <div style="font-size:13px;line-height:1.7;color:#33474f">
+          ひとりで粘るより、30分だけ人に聞いた方が早いところかも。
+          この単元が得意で、<b>あなたと相性が合いそうな先生</b>を1人だけ紹介するね。
+        </div>
+        <div class="tcard">
+          <div class="avatar">田</div>
+          <div>
+            <div class="n">田中 みなみ先生</div>
+            <div class="d">東京大学 教育学部 2年 ／ 担当127回</div>
+            <div class="chips">
+              <span class="chip" id="offerChip">この単元が得意</span>
+              <span class="chip">ゆっくり丁寧</span>
+              <span class="chip">同学年の担当が多い</span>
+            </div>
+          </div>
+        </div>
+        <button class="btn primary" onclick="D.toBooking()">空いている時間を見てみる</button>
+        <button class="btn ghost" onclick="D.dismissOffer()">今はいい</button>
+        <div class="note review-only">※ 同じ単元を3回間違えた時だけ表示。閉じたら7日間は出ません。</div>
+      </div>
+
+      <div class="card hidden" id="nextcard">
+        <div style="font-size:13px;font-weight:800;margin-bottom:6px" id="nextTitle">また明日！</div>
+        <div style="font-size:12.5px;color:var(--sub);line-height:1.6" id="nextBody"></div>
+        <button class="btn ghost" style="margin-top:12px" onclick="D.next()">おかわり1問（任意）</button>
+      </div>
+    </section>
+
+    <!-- ========== 記録 ========== -->
+    <section id="tab-record" class="hidden">
+      <div class="card">
+        <div class="eyebrow">連続記録</div>
+        <div class="bignum"><span id="streakBig">–</span><small>日</small></div>
+        <div style="font-size:12px;color:var(--sub);margin-top:6px" id="streakSub"></div>
+        <div class="cal" id="cal"></div>
+      </div>
+
+      <div class="card">
+        <div class="eyebrow">正答率</div>
+        <div style="display:flex;gap:24px;align-items:flex-end">
+          <div>
+            <div class="bignum"><span id="accNum">–</span><small>%</small></div>
+            <div style="font-size:11.5px;color:var(--sub);margin-top:4px" id="accSub">通算</div>
+          </div>
+          <div id="accDeltaWrap">
+            <div class="bignum" id="accDelta" style="font-size:30px;color:var(--brand)">–</div>
+            <div style="font-size:11.5px;color:var(--sub);margin-top:4px">先月の自分から</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="eyebrow">単元別</div>
+        <div id="unitList"></div>
+        <div class="note review-only">⚠︎ が付いた単元だけが、先生提案の対象になります。</div>
+      </div>
+
+      <div class="card">
+        <div class="eyebrow">Teach内 学力スコア（<span id="devGrade">–</span>・<span id="devN">–</span>人）</div>
+        <div id="devOn">
+          <div style="display:flex;align-items:flex-end;gap:22px;margin-top:4px">
+            <div>
+              <div class="bignum"><span id="devNum">–</span></div>
+              <div style="font-size:11.5px;color:var(--sub);margin-top:4px" id="devDate"></div>
+            </div>
+            <div>
+              <div class="bignum" id="devDelta" style="font-size:30px;color:var(--brand)">–</div>
+              <div style="font-size:11.5px;color:var(--sub);margin-top:4px">先月から</div>
+            </div>
+          </div>
+          <div class="curve">
+            <svg viewBox="0 0 300 84" preserveAspectRatio="none">
+              <defs><linearGradient id="cg" x1="0" x2="1"><stop offset="0%" stop-color="#eef3f5"/><stop offset="100%" stop-color="#bfe4df"/></linearGradient></defs>
+              <path d="M0,84 C60,84 70,10 150,10 C230,10 240,84 300,84 Z" fill="url(#cg)"/>
+            </svg>
+            <div class="you" id="devPin"></div>
+            <div class="lbl" id="devPinLbl">あなた</div>
+          </div>
+          <div class="scale"><span>35</span><span>40</span><span>50</span><span>60</span><span>65</span></div>
+          <div id="devRank" style="font-size:13.5px;font-weight:800;margin-top:16px;line-height:1.6"></div>
+          <div id="devMsg" style="font-size:12.5px;color:#33474f;line-height:1.7;margin-top:6px"></div>
+          <div id="devPeer" class="peer"></div>
+        </div>
+        <div id="devOff" class="locked hidden">
+          <div class="t">まだ集計できません</div>
+          <div class="s">同学年の解答が<span id="minN">50</span>人を超えると表示されます（現在 <span id="curN">–</span>人）。<span class="review-only"><br>母数が少ないと1問で±8ほど振れて、数字自体が正しくなくなるため。</span></div>
+        </div>
+      </div>
+
+      <div class="card review-only">
+        <div class="eyebrow">保護者に共有される内容</div>
+        <div style="font-size:13px;line-height:1.75;color:#33474f">
+          保護者アプリに出るのは <b>取り組み日数と解いた問題数だけ</b>です。<br>
+          スコアは<b>あなたが「共有する」を押した時だけ</b>渡ります。
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <nav>
+    <button class="active" id="nav-today" onclick="D.tab('today')"><span class="ico">✏️</span>今日の1問</button>
+    <button id="nav-record" onclick="D.tab('record')"><span class="ico">📈</span>記録</button>
+    <button onclick="D.toApp('search')"><span class="ico">🔎</span>先生をさがす</button>
+    <button onclick="D.toApp('booking')"><span class="ico">📅</span>予約</button>
+  </nav>
+</div>
+
+<script>
+/* ============================================================
+ *  設定
+ * ========================================================== */
+// GASのWeb App URL（/exec で終わるもの）を貼るとライブ動作になる。
+// 空のままなら、下のダミーデータで動く「モックモード」。
+const GAS_URL = "";
+
+// アプリ側からは ?uid=...&grade=中2 で開く想定。
+const P = new URLSearchParams(location.search);
+const UID = P.get("uid") || localAnonId();
+const GRADE = P.get("grade") || "中2";
+const LIVE = !!GAS_URL;
+// ?review=1 の時だけ設計意図の注記を出す（社内レビュー用）
+const REVIEW = P.get("review") === "1";
+if(REVIEW) document.body.classList.add("review");
+
+function localAnonId(){
+  try{
+    let v = localStorage.getItem("tq_uid");
+    if(!v){ v = "anon-" + Math.random().toString(36).slice(2,10); localStorage.setItem("tq_uid", v); }
+    return v;
+  }catch(e){ return "anon-tmp"; }
+}
+
+/* ============================================================
+ *  ダミーデータ（モックモード用・差し替え前提）
+ * ========================================================== */
+const QUESTIONS = [
+  {id:"q001",subject:"数学",unit:"二次関数",q:"y = 2x² のグラフ上で、x が 1 から 3 まで変わるときの変化の割合は？",
+   choices:["4","6","8","12"],answer:2,dist:[18,24,41,17],
+   explain:"変化の割合 =（yの増加量）÷（xの増加量）。y=2x² なので x=1→2、x=3→18。(18−2)÷(3−1)=8。",
+   teacher:{i:"佐",n:"佐藤先生（数学）",m:"「2乗だから割合も2乗」って思っちゃった人、めちゃくちゃ多いところ。ここは公式より“実際に代入して引き算”が一番速いよ。"}},
+  {id:"q002",subject:"数学",unit:"二次関数",q:"y = ax² が点(2, 12)を通るとき、a の値は？",
+   choices:["2","3","4","6"],answer:1,dist:[22,38,26,14],
+   explain:"12 = a × 2² = 4a より a = 3。",
+   teacher:{i:"佐",n:"佐藤先生（数学）",m:"代入するだけ。ただし 2² を 2×2 じゃなく 2+2 にしちゃうミスが本当に多いので、書いて確かめる癖をつけよう。"}},
+  {id:"q003",subject:"数学",unit:"二次関数",q:"y = −x² のグラフについて正しいものは？",
+   choices:["上に開く放物線","下に開く放物線","直線","原点を通らない"],answer:1,dist:[27,45,11,17],
+   explain:"a<0 のとき放物線は下に開く。原点(0,0)は通る。",
+   teacher:{i:"佐",n:"佐藤先生（数学）",m:"マイナスが付いたら“ひっくり返る”。グラフは覚えるより、x=1,2 を入れて点を打つほうが確実だよ。"}},
+  {id:"q004",subject:"英語",unit:"現在完了",q:"( ) 内に入るのは？ I ( ) in Tokyo for five years.",
+   choices:["live","lived","have lived","am living"],answer:2,dist:[12,29,44,15],
+   explain:"「5年間ずっと住んでいる」という継続 → 現在完了 have lived。",
+   teacher:{i:"高",n:"高橋先生（英語）",m:"for が出てきたら現在完了を疑う、が第一歩。過去形との違いは「今も続いてるかどうか」だけ。"}},
+  {id:"q005",subject:"理科",unit:"化学変化",q:"鉄と硫黄を混ぜて加熱してできる物質は？",
+   choices:["酸化鉄","硫化鉄","硫酸","鉄と硫黄の混合物のまま"],answer:1,dist:[21,52,14,13],
+   explain:"Fe + S → FeS（硫化鉄）。もとの鉄とは別の性質になる。",
+   teacher:{i:"鈴",n:"鈴木先生（理科）",m:"「混合物」と「化合物」の違いを聞かれてる問題。磁石にくっつくかどうかで判別できるのがポイント。"}}
+];
+
+const MOCK_ME = {
+  streak:6, total:41, accuracy:72, accuracyDelta:9,
+  units:[{unit:"二次関数",n:12,rate:34},{unit:"確率",n:9,rate:69},{unit:"連立方程式",n:11,rate:76},{unit:"一次関数",n:9,rate:88}],
+  weakUnit:null,
+  score:{visible:true,value:52.4,delta:2.1,rank:118,n:312,grade:"中2"}
+};
+
+/* ============================================================
+ *  API（LIVEならGAS、そうでなければダミー）
+ * ========================================================== */
+const API = {
+  async today(){
+    if(!LIVE) return {ok:true, question:QUESTIONS[D.idx], me:JSON.parse(JSON.stringify(MOCK_ME))};
+    const r = await fetch(`${GAS_URL}?action=today&uid=${encodeURIComponent(UID)}&grade=${encodeURIComponent(GRADE)}`);
+    return r.json();
+  },
+  async answer(qid, choice, ms){
+    if(!LIVE){
+      const q = QUESTIONS.find(x=>x.id===qid);
+      const me = JSON.parse(JSON.stringify(MOCK_ME));
+      return {ok:true, correct: choice===q.answer, answer_index:q.answer, dist:q.dist, me:me};
+    }
+    // Content-Type は text/plain。application/json にすると
+    // CORSプリフライトが飛んでGASでは必ず失敗する。
+    const r = await fetch(GAS_URL, {
+      method:"POST",
+      headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body: JSON.stringify({action:"answer", uid:UID, grade:GRADE, question_id:qid, choice:choice, ms:ms})
+    });
+    return r.json();
+  }
+};
+
+/* ============================================================
+ *  画面
+ * ========================================================== */
+const D = {
+  idx:0, answered:false, q:null, me:null, t0:0,
+  missCount:2, bigN:true, tier:"mid",   // ← モックモードの操作用
+
+  async init(){
+    document.getElementById("demo").classList.toggle("hidden", LIVE);
+    if(!LIVE) document.querySelector("header").style.marginTop = "30px";
+    try{
+      const res = await API.today();
+      if(!res.ok) throw new Error(res.error||"読み込みに失敗しました");
+      if(!res.question) throw new Error("今日の問題がまだ登録されていません");
+      this.q = res.question; this.me = res.me;
+      this.renderQ(); this.renderMe();
+    }catch(e){ this.err(e.message); }
+  },
+
+  err(msg){ errBox.innerHTML = `<div class="err">⚠️ ${msg}</div>`; },
+
+  renderQ(){
+    const q = this.q;
+    this.answered = false; this.t0 = Date.now();
+    const d = new Date();
+    qdate.textContent = `${d.getMonth()+1}月${d.getDate()}日（${"日月火水木金土"[d.getDay()]}）の1問`;
+    qsubj.textContent = q.subject; qunit.textContent = q.unit;
+    qtext.textContent = q.q;
+    choices.innerHTML = "";
+    q.choices.forEach((c,i)=>{
+      const b = document.createElement("button");
+      b.className = "choice";
+      b.innerHTML = `<span class="mark">${"ABCD"[i]}</span><span>${c}</span>`;
+      b.onclick = ()=>this.answer(i);
+      choices.appendChild(b);
+    });
+    qcard.classList.remove("hidden");
+    rcard.classList.add("hidden"); nextcard.classList.add("hidden"); offer.classList.add("hidden");
+    this.state();
+  },
+
+  async answer(pick){
+    if(this.answered) return;
+    this.answered = true;
+    [...choices.children].forEach(el=>el.disabled=true);
+
+    let res;
+    try{ res = await API.answer(this.q.id, pick, Date.now()-this.t0); }
+    catch(e){ this.err("送信に失敗しました。通信環境を確認してください。"); return; }
+    if(!res.ok){ this.err(res.error||"エラーが発生しました"); return; }
+
+    const ai = res.answer_index, dist = res.dist || [];
+    [...choices.children].forEach((el,i)=>{
+      if(i===ai) el.classList.add("correct");
+      else if(i===pick) el.classList.add("wrong");
+      else el.classList.add("dim");
+      if(dist[i]!==undefined){
+        const p=document.createElement("span"); p.className="pct"; p.textContent=dist[i]+"%"; el.appendChild(p);
+      }
+    });
+
+    verdict.className = "verdict " + (res.correct?"ok":"ng");
+    verdict.innerHTML = res.correct
+      ? "✅ 正解！"
+      : `❌ おしい！${dist[ai]!==undefined?` <span style="font-size:12px;font-weight:700;color:var(--sub)">ここは全体の${100-dist[ai]}%が落とす問題</span>`:""}`;
+    explain.textContent = this.q.explain;
+
+    distHead.textContent = `みんなの解答${this.me&&this.me.score&&this.me.score.n?`（${GRADE}・${this.me.score.n}人）`:""}`;
+    distRows.innerHTML = this.q.choices.map((c,i)=>`
+      <div class="row">
+        <span style="width:56px;font-weight:800">${"ABCD"[i]} ${c}</span>
+        <span class="bar"><i class="${i===pick?'me':''}" style="width:${dist[i]||0}%"></i></span>
+        <span style="width:34px;text-align:right;font-weight:800">${dist[i]||0}%</span>
+      </div>`).join("");
+
+    const t = this.q.teacher||{};
+    tAv.textContent = t.i||"先"; tName.textContent = t.n||""; tMsg.textContent = t.m||"";
+
+    rcard.classList.remove("hidden"); rcard.classList.add("fade");
+    nextcard.classList.remove("hidden");
+    this.renderNext();
+
+    if(res.me){ this.me = res.me; this.renderMe(); }
+
+    // 予約導線の発火
+    if(!LIVE && !res.correct && this.q.unit==="二次関数") this.missCount++;
+    const weak = LIVE ? (this.me&&this.me.weakUnit) : (this.missCount>=3?{unit:this.q.unit,misses:this.missCount}:null);
+    if(weak && !this.offerDismissed()) setTimeout(()=>this.showOffer(weak), 600);
+    this.state();
+  },
+
+  showOffer(weak){
+    offerHead.textContent = `💡 ${weak.unit}、今週${weak.misses}回つまずいてるみたい`;
+    offerChip.textContent = `${weak.unit}が得意`;
+    offer.classList.remove("hidden"); offer.classList.add("fade");
+  },
+  offerDismissed(){
+    try{
+      const t = Number(localStorage.getItem("tq_offer_dismissed")||0);
+      return Date.now()-t < 7*24*3600*1000;   // 7日間は出さない
+    }catch(e){ return false; }
+  },
+  dismissOffer(){
+    try{ localStorage.setItem("tq_offer_dismissed", String(Date.now())); }catch(e){}
+    offer.classList.add("hidden");
+  },
+
+  renderNext(){
+    const s = (this.me&&this.me.streak)||0;
+    nextTitle.textContent = "また明日！";
+    nextBody.innerHTML = `明日も解くと <b style="color:var(--warn)">${s+1}日連続</b>。`;
+  },
+
+  /* ---- 記録タブ ---- */
+  renderMe(){
+    const me = this.me; if(!me) return;
+    streakNum.textContent = me.streak;
+    streakBig.textContent = me.streak;
+    streakSub.textContent = `これまでに ${me.total} 問。`;
+    accNum.textContent = me.accuracy===null?"–":me.accuracy;
+    accSub.textContent = `通算（${me.total}問）`;
+    if(me.accuracyDelta===null||me.accuracyDelta===undefined){
+      accDeltaWrap.style.display="none";
+    }else{
+      accDeltaWrap.style.display="";
+      accDelta.textContent = (me.accuracyDelta>=0?"+":"")+me.accuracyDelta;
+      accDelta.innerHTML += '<small style="font-size:12px">pt</small>';
+      accDelta.style.color = me.accuracyDelta>=0?"var(--brand)":"var(--sub)";
+    }
+
+    unitList.innerHTML = (me.units||[]).map(u=>{
+      const weak = u.rate < 50;
+      return `<div class="unit">
+        <div class="top"><span class="${weak?'weak':''}">${u.unit}${weak?" ⚠︎":""}</span><em class="${weak?'weak':''}">${u.rate}%</em></div>
+        <div class="bar"><i style="width:${u.rate}%${weak?';background:var(--warn)':''}"></i></div>
+      </div>`;
+    }).join("") || '<div style="font-size:12px;color:var(--sub)">まだデータがありません</div>';
+
+    this.renderCal(me);
+    this.renderScore(me.score);
+  },
+
+  renderCal(me){
+    // ライブでは日付配列を返す拡張余地あり。今は連続日数から逆算して描画。
+    const n = me.streak||0;
+    let html = "";
+    for(let i=13;i>=0;i--){
+      const d = new Date(); d.setDate(d.getDate()-i);
+      const on = i < n;
+      html += `<div class="${on?"on ":""}${i===0?"today":""}">${d.getDate()}</div>`;
+    }
+    cal.innerHTML = html;
+  },
+
+  renderScore(sc){
+    if(!sc){ devOn.classList.add("hidden"); devOff.classList.remove("hidden"); curN.textContent="0"; return; }
+    if(!sc.visible){
+      devOn.classList.add("hidden"); devOff.classList.remove("hidden");
+      minN.textContent = sc.minN||50; curN.textContent = sc.n||0;
+      return;
+    }
+    devOn.classList.remove("hidden"); devOff.classList.add("hidden");
+    devGrade.textContent = sc.grade||GRADE;
+    devN.textContent = sc.n;
+    devNum.textContent = sc.value.toFixed(1);
+    const d = new Date();
+    devDate.textContent = `${d.getMonth()+1}月${d.getDate()}日時点`;
+
+    const up = sc.delta!==null && sc.delta>0;
+    devDelta.textContent = sc.delta===null?"–":(sc.delta>0?"+":"")+sc.delta.toFixed(1);
+    devDelta.style.color = up?"var(--brand)":"var(--sub)";
+
+    const pos = Math.max(2, Math.min(98, (sc.value-35)/30*100));
+    devPin.style.left = pos+"%"; devPinLbl.style.left = pos+"%";
+
+    const pct = Math.round(sc.rank/sc.n*100);
+    const low = sc.value < 45;
+
+    // 下位では順位を控えめにし、伸びを主役にする
+    devRank.textContent = low ? `${sc.n}人中 ${sc.rank}位` : `${sc.n}人中 ${sc.rank}位（上位${pct}%）`;
+    devRank.style.color = low ? "#93a4ac" : "";
+    devRank.style.fontSize = low ? "12px" : "13.5px";
+
+    if(low && up){
+      devMsg.innerHTML = `数字はまだ低いけど、<b>先月から+${sc.delta.toFixed(1)}</b>。伸びのペースなら、あなたは十分速い。`;
+      devPeer.innerHTML = `⬆︎ この位置から半年で50を超えた人もいます。最初の1か月は全員、正答率50%を切っていました。`;
+    }else if(pct<=20){
+      devMsg.innerHTML = `上位${pct}%。ここから先は<b>ミスの質</b>で差がつく段階です。苦手単元を1つ潰せば、さらに上が見えます。`;
+      devPeer.innerHTML = `⬆︎ 同じくらいの人は、平均で週4.2日解いています。`;
+    }else{
+      devMsg.innerHTML = sc.delta!==null&&up
+        ? `先月から<b>+${sc.delta.toFixed(1)}</b>。伸びている最中です。一番低い単元を直すのが一番効きます。`
+        : `一番低い単元を1つ直すのが、いちばん効きます。`;
+      devPeer.innerHTML = `⬆︎ ここから10ポイント上げた人の多くは、まず苦手単元を1つだけ集中して潰しています。`;
+    }
+  },
+
+  /* ---- 遷移 ---- */
+  toBooking(){ this.toApp("booking"); },
+  toApp(where){
+    // アプリ内WebViewからネイティブ側へ渡す。実装に合わせて差し替え。
+    const url = "teach://" + where;
+    if(LIVE){ location.href = url; }
+    else{ alert("▶ Teachアプリ本体へ遷移： " + url); }
+  },
+
+  tab(t){
+    document.getElementById("tab-today").classList.toggle("hidden", t!=="today");
+    document.getElementById("tab-record").classList.toggle("hidden", t!=="record");
+    document.getElementById("nav-today").classList.toggle("active", t==="today");
+    document.getElementById("nav-record").classList.toggle("active", t==="record");
+    window.scrollTo({top:0});
+  },
+
+  /* ---- 以下はモックモード専用の操作 ---- */
+  next(){ if(LIVE){ location.reload(); return; } this.idx=(this.idx+1)%QUESTIONS.length; this.q=QUESTIONS[this.idx]; this.renderQ(); window.scrollTo({top:0,behavior:"smooth"}); },
+  reset(){ this.idx=0; this.missCount=2; this.q=QUESTIONS[0]; this.renderQ(); window.scrollTo({top:0}); },
+  forceWrong(){ this.missCount=3; this.showOffer({unit:this.q.unit,misses:3}); offer.scrollIntoView({behavior:"smooth",block:"center"}); this.state(); },
+  toggleN(){
+    this.bigN=!this.bigN;
+    MOCK_ME.score = this.bigN ? {visible:true,value:52.4,delta:2.1,rank:118,n:312,grade:GRADE} : {visible:false,n:18,minN:50};
+    this.me = JSON.parse(JSON.stringify(MOCK_ME)); this.renderMe(); this.tab('record'); this.state();
+  },
+  setTier(t){
+    this.tier=t;
+    const S={hi:{value:61.8,delta:2.6,rank:41},mid:{value:52.4,delta:2.1,rank:118},lo:{value:41.2,delta:3.4,rank:254}}[t];
+    MOCK_ME.score={visible:true,value:S.value,delta:S.delta,rank:S.rank,n:312,grade:GRADE};
+    MOCK_ME.accuracy = t==="hi"?86:t==="mid"?72:48;
+    this.bigN=true;
+    this.me=JSON.parse(JSON.stringify(MOCK_ME)); this.renderMe(); this.tab('record'); this.state();
+  },
+  state(){
+    if(LIVE) return;
+    const t={hi:"上位",mid:"中位",lo:"下位"}[this.tier];
+    demoState.textContent = `｜ミス${this.missCount}回 ／ 母数${this.bigN?"312":"18"}人 ／ ${t}層`;
+  }
+};
+
+D.init();
+</script>
+</body>
+</html>
