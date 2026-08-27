@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>今日の1問 | Teach</title>
+<style>
+  :root{--bg:#f5f7f8;--card:#fff;--ink:#16232b;--sub:#6b7c86;--line:#e4eaed;
+        --brand:#0f9b8e;--brand-d:#0b7d72;--brand-l:#e6f5f3;--warn-d:#c25f26;--ng:#d95a5a;--ng-l:#fdeded}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{background:#dfe5e8;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;color:var(--ink);display:flex;justify-content:center}
+  #frame{width:100%;max-width:420px;min-height:100vh;background:var(--bg);box-shadow:0 0 40px rgba(0,0,0,.12)}
+  header{position:sticky;top:0;z-index:20;background:rgba(245,247,248,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:13px 18px;display:flex;align-items:center;justify-content:space-between}
+  .logo{font-size:15px;font-weight:800}.logo span{color:var(--brand)}
+  .day{font-size:12px;color:var(--sub);font-weight:700}
+  main{padding:18px}
+  .card{background:var(--card);border-radius:18px;padding:20px;margin-bottom:14px;box-shadow:0 1px 3px rgba(20,40,50,.06)}
+  .eyebrow{font-size:12px;font-weight:800;color:var(--brand);letter-spacing:.06em;margin-bottom:10px}
+  .q{font-size:18px;font-weight:700;line-height:1.65;margin:0}
+  .meta{font-size:12px;color:var(--sub);margin-top:10px}
+  .ch{display:block;width:100%;text-align:left;background:#fff;border:2px solid var(--line);border-radius:14px;padding:15px 16px;margin-top:10px;font-size:16px;font-weight:700;font-family:inherit;color:var(--ink);cursor:pointer}
+  .ch.ok{border-color:var(--brand);background:var(--brand-l);color:var(--brand-d)}
+  .ch.no{border-color:var(--ng);background:var(--ng-l);color:var(--ng)}
+  .ch.dim{opacity:.45}
+  .ch b{float:right;font-size:13px}
+  .guess{display:flex;gap:8px;margin-top:12px}
+  .guess button{flex:1;padding:13px 0;border:2px solid var(--line);background:#fff;border-radius:12px;font-size:15px;font-weight:800;font-family:inherit;color:var(--ink);cursor:pointer}
+  .res{text-align:center;padding:6px 0 2px}
+  .res .big{font-size:26px;font-weight:800}
+  .res.ok .big{color:var(--brand)} .res.no .big{color:var(--ng)}
+  .rate{background:var(--brand-l);border-radius:14px;padding:14px 16px;margin-top:14px;text-align:center}
+  .rate.tomorrow{background:#f3f6f7}
+  .rate .src{font-size:11px;font-weight:800;letter-spacing:.06em;color:var(--brand-d);opacity:.85;margin-bottom:6px}
+  .rate .n{font-size:30px;font-weight:800;color:var(--brand-d);line-height:1.1}
+  .rate.tomorrow .n{color:var(--sub);font-size:19px}
+  .rate .t{font-size:12px;color:var(--sub);margin-top:4px;line-height:1.7}
+  .rate .cite{font-size:11px;color:var(--sub);margin-top:10px;line-height:1.6;text-align:left}
+  .grow{display:flex;align-items:center;gap:10px;background:#fff;border-radius:11px;padding:10px 12px;margin-top:12px}
+  .grow .gl{font-size:11px;color:var(--sub);font-weight:700;white-space:nowrap}
+  .grow .gv{font-size:20px;font-weight:800}
+  .grow .gj{margin-left:auto;font-size:13px;font-weight:800;text-align:right;line-height:1.3}
+  .grow .gj span{display:block;font-size:10px;font-weight:600;color:var(--sub);margin-top:2px}
+  .hit-a{color:var(--brand-d)}.hit-b{color:var(--warn-d)}.hit-c{color:var(--ng)}.hit-w{color:var(--sub)}
+  .exp{font-size:14px;line-height:1.85;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+  .bridge{margin-top:12px;font-size:13px;font-weight:700;color:var(--brand-d);background:var(--brand-l);border-radius:10px;padding:10px 12px}
+  .hintbox{font-size:13px;line-height:1.8;color:var(--sub);background:#f8fafb;border-radius:12px;padding:12px 14px;margin-top:12px}
+  .report{display:block;width:100%;margin-top:14px;padding:11px;border:1px solid var(--line);background:#fff;border-radius:11px;font-size:12px;font-weight:700;color:var(--sub);font-family:inherit;cursor:pointer}
+  .goalcard{background:linear-gradient(180deg,#0f9b8e,#0b7d72);color:#fff;border-radius:18px;padding:20px;margin-bottom:14px}
+  .goalcard .lab{font-size:12px;opacity:.85;font-weight:700}
+  .goalcard .cd{display:flex;align-items:baseline;gap:6px;margin:6px 0 2px}
+  .goalcard .cd b{font-size:38px;font-weight:800;line-height:1}
+  .goalcard .cd span{font-size:14px;font-weight:700;opacity:.9}
+  .goalcard .unit{font-size:15px;font-weight:700;margin-top:8px}
+  .gsplit{border-top:1px solid rgba(255,255,255,.25);margin:14px 0 12px}
+  .dots{display:flex;gap:7px;align-items:center;margin-bottom:12px}
+  .dot{width:24px;height:24px;border-radius:99px;border:2px solid rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;cursor:pointer}
+  .dot.on{background:#fff;color:var(--brand-d);border-color:#fff}
+  .rem{font-size:14px;font-weight:800;margin-left:4px}
+  .urg{background:rgba(255,255,255,.16);border-radius:11px;padding:10px 12px;font-size:13px;font-weight:700;line-height:1.6;margin-bottom:12px}
+  .book{display:block;width:100%;padding:15px;border-radius:13px;background:#fff;color:var(--brand-d);font-size:15px;font-weight:800;text-align:center;border:none;font-family:inherit;cursor:pointer}
+  .btn{display:block;width:100%;padding:15px;border:none;border-radius:14px;background:var(--brand);color:#fff;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit}
+  .btn.sub{background:#fff;color:var(--brand);border:2px solid var(--brand)}
+  .btn.ghost{background:none;color:var(--sub);font-weight:600;font-size:13px;padding:10px}
+  .done{text-align:center;padding:22px 18px}
+  .done .m{font-size:17px;font-weight:800;color:var(--brand-d)}
+  .done .s{font-size:13px;color:var(--sub);margin-top:6px;line-height:1.7}
+  h1{font-size:20px;margin:0 0 6px;line-height:1.4}
+  .lead{color:var(--sub);font-size:13px;line-height:1.7;margin:0 0 18px}
+  .opt{display:block;width:100%;text-align:left;background:#fff;border:2px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:10px;font-size:15px;font-weight:700;font-family:inherit;color:var(--ink);cursor:pointer}
+  .opt small{display:block;font-weight:500;color:var(--sub);font-size:12px;margin-top:3px}
+  label{display:block;font-size:13px;font-weight:700;margin:14px 0 6px}
+  input{width:100%;padding:13px 14px;border:2px solid var(--line);border-radius:12px;font-size:16px;font-family:inherit;background:#fff;color:var(--ink)}
+  input:focus{outline:none;border-color:var(--brand)}
+  .hint{font-size:12px;color:var(--sub);margin-top:6px;line-height:1.6}
+  .cnt{display:flex;gap:8px;margin-top:8px}
+  .cnt button{flex:1;padding:14px 0;border:2px solid var(--line);background:#fff;border-radius:12px;font-size:17px;font-weight:800;font-family:inherit;cursor:pointer}
+  .cnt button.sel{border-color:var(--brand);background:var(--brand);color:#fff}
+  .steps{display:flex;gap:6px;margin-bottom:18px}
+  .steps i{flex:1;height:3px;background:var(--line);border-radius:99px}
+  .steps i.on{background:var(--brand)}
+</style>
+</head>
+<body>
+<div id="frame">
+  <header><div class="logo">今日の<span>1問</span></div><div class="day" id="dstr"></div></header>
+  <main id="app"></main>
+</div>
+<script>
+/* ====== 設定 ====== */
+const GAS_URL = "";                 // ← GASの /exec URL。空だとサンプルで動く
+const BOOK_URL = "https://teach.go.link/student/teacher-list?type=recent";
+const LS = "teach_goal_v1";
+
+/* ====== サンプル（GAS_URLが空のとき） ====== */
+const SAMPLE = {
+  question:{id:"d001",question:"定価1000円の商品が「2割引き」。さらにレジで「そこから10%オフ」。支払いはいくら？",
+    choices:["700円","720円","750円","800円"],hint:"まず2割引きの値段を出してから、その値段の10%を引く。",
+    unit:"割合",subject:"算数・数学",bridge_unit:"割合",source:""},
+  answer_index:1,
+  explain:"1000×0.8＝800円。そこから10%オフなので 800×0.9＝720円。2割＋1割＝3割引きの700円にはならない。何に対しての%かを毎回たしかめる癖が、中学の割合でそのまま効いてくる。",
+  rate:{mode:"pct",n:214,ok:81,rate:38}
+};
+
+const GOALS=[
+  {id:'test', t:'学校のテスト', s:'中間・期末テスト', date:true, hint:'2学期の中間は10月上旬、期末は11月下旬が目安です'},
+  {id:'mock', t:'模試', s:'首都圏模試・合不合・全統など', date:true, hint:'主催者のサイトで日程を確認して入れてください'},
+  {id:'exam', t:'検定', s:'英検・漢検・数検', date:true, hint:'一次試験の日を入れてください'},
+  {id:'entr', t:'入試', s:'受験本番', date:true, hint:'第一志望の入試日を入れてください'},
+  {id:'hw',   t:'提出物・宿題', s:'いちばん短いゴール', date:true, hint:'提出日を入れてください'},
+  {id:'weak', t:'苦手をなくす', s:'期日なし。回数で進みます', date:false, hint:''},
+  {id:'catch',t:'学校に迴いつく', s:'期日なし。回数で進みます', date:false, hint:''}
+];
+
+let D={}, S={guess:null, pick:null, reveal:null, tmp:{}};
+const app=document.getElementById('app'), $=s=>document.querySelector(s);
+document.getElementById('dstr').textContent=new Date().toLocaleDateString('ja-JP',{month:'long',day:'numeric',weekday:'short'});
+const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const today=()=>new Date().toISOString().slice(0,10);
+function load(){ try{D=JSON.parse(localStorage.getItem(LS))||{}}catch(e){D={}} }
+function save(){ try{localStorage.setItem(LS,JSON.stringify(D))}catch(e){} }
+
+async function post(body){
+  if(!GAS_URL) return {ok:true, ...(body.action==='answer'?SAMPLE:{}), uid:'sample'};
+  try{
+    const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify(body)});
+    return await r.json();
+  }catch(e){ return {ok:false,error:String(e)} }
+}
+async function get(params){
+  if(!GAS_URL) return {ok:true, question:SAMPLE.question, answered:null, rate:SAMPLE.rate, goal:null};
+  try{
+    const u=GAS_URL+'?'+new URLSearchParams(params).toString();
+    const r=await fetch(u); return await r.json();
+  }catch(e){ return {ok:false,error:String(e)} }
+}
+
+/* ====== セットアップ ====== */
+function setup(step){
+  const bar=`<div class="steps">${[1,2,3,4].map(i=>`<i class="${i<=step?'on':''}"></i>`).join('')}</div>`;
+  const t=S.tmp;
+  if(step===1){
+    app.innerHTML=bar+`<h1>何に向けて、がんばる？</h1>
+      <p class="lead">ひとつ選んでください。あとから変えられます。</p>
+      ${GOALS.map(g=>`<button class="opt" data-g="${g.id}">${g.t}<small>${g.s}</small></button>`).join('')}`;
+    app.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{
+      t.goal=b.dataset.g; t.goalName=GOALS.find(x=>x.id===t.goal).t;
+      setup(GOALS.find(x=>x.id===t.goal).date?2:3);
+    });
+  }
+  if(step===2){
+    const g=GOALS.find(x=>x.id===t.goal);
+    app.innerHTML=bar+`<h1>いつまで？</h1>
+      <p class="lead">${g.t}の日を入れてください。<br>ここから毎日、残り日数が減っていきます。</p>
+      <input type="date" id="dt" value="${t.date||''}">
+      <div class="hint">${g.hint}</div><div style="height:20px"></div>
+      <button class="btn" id="nx">次へ</button><button class="btn ghost" id="bk">もどる</button>`;
+    $('#nx').onclick=()=>{const v=$('#dt').value; if(!v){$('#dt').focus();return} t.date=v; setup(3)};
+    $('#bk').onclick=()=>setup(1);
+  }
+  if(step===3){
+    app.innerHTML=bar+`<h1>いま、どこをやってる？</h1>
+      <p class="lead">単元の名前で書いてください。<br>「一次関数のグラフ」「旅人算」のように。</p>
+      <input type="text" id="unit" placeholder="例：一次関数のグラフ" value="${esc(t.unit||'')}">
+      <label>そこまで、先生とあと何回？</label>
+      <div class="cnt">${[1,2,3,4,5].map(n=>`<button data-n="${n}" class="${t.n==n?'sel':''}">${n}</button>`).join('')}</div>
+      <div class="hint">迷ったら2回。あとから変えられます。</div><div style="height:20px"></div>
+      <button class="btn" id="nx">次へ</button><button class="btn ghost" id="bk">もどる</button>`;
+    app.querySelectorAll('.cnt button').forEach(b=>b.onclick=()=>{
+      t.n=+b.dataset.n; app.querySelectorAll('.cnt button').forEach(x=>x.classList.remove('sel')); b.classList.add('sel')});
+    $('#nx').onclick=()=>{const u=$('#unit').value.trim(); if(!u){$('#unit').focus();return} t.unit=u; t.n=t.n||2; setup(4)};
+    $('#bk').onclick=()=>setup(GOALS.find(x=>x.id===t.goal).date?2:1);
+  }
+  if(step===4){
+    app.innerHTML=bar+`<h1>あと少しです</h1>
+      <p class="lead">つづきをいつでも開けるように、<br>Teachに登録しているメールアドレスを教えてください。</p>
+      <input type="email" id="em" placeholder="you@example.com" value="${esc(t.email||'')}">
+      <div class="hint">アプリに登録しているものと同じアドレスを入れてください。<br>ゴールを覚えておくためだけに使います。</div>
+      <div style="height:20px"></div>
+      <button class="btn" id="nx">はじめる</button><button class="btn ghost" id="bk">もどる</button>`;
+    $('#nx').onclick=async()=>{
+      const e=$('#em').value.trim();
+      if(!/^[^@\s]+@[^@\s]+\.[a-zA-Z]{2,}$/.test(e)){$('#em').focus();return}
+      $('#nx').disabled=true; $('#nx').textContent='…';
+      const r=await post({action:'identify',email:e});
+      if(!r.ok){ $('#nx').disabled=false; $('#nx').textContent='はじめる'; alert('うまく登録できませんでした。もう一度お試しください。'); return }
+      D={uid:r.uid, email:e, goal:t.goal, goalName:t.goalName, date:t.date||null,
+         unit:t.unit, n:t.n, done:0, lastDone:null};
+      save();
+      await post({action:'save_goal',uid:D.uid,goal_type:D.goal,goal_name:D.goalName,
+                  target_date:D.date||'',unit:D.unit,n_needed:D.n,n_done:0});
+      main();
+    };
+    $('#bk').onclick=()=>setup(3);
+  }
+}
+
+/* ====== メイン ====== */
+function daysLeft(){ if(!D.date) return null; return Math.ceil((new Date(D.date+'T23:59:59')-new Date())/86400000) }
+function gap(g,a){ return Math.abs(g-a) }
+function guessRow(g,d,label){
+  const m = label || (d<=10?'ぴったり！':d<=20?'いい線でした':'はずれ');
+  const c = label?'hit-w':(d<=10?'hit-a':d<=20?'hit-b':'hit-c');
+  return `<div class="grow"><div class="gl">あなたの予想</div><div class="gv">${g}%</div>
+    <div class="gj ${c}">${m}${label?'':`<span>差 ${Math.round(d)}pt</span>`}</div></div>`;
+}
+function rateBox(rate,guess,source){
+  if(!rate) return '';
+  if(rate.mode==='gov'){
+    const m=String(source||'').match(/([0-9]+(?:\.[0-9]+)?)\s*%/);
+    const v=m?parseFloat(m[1]):null;
+    return `<div class="rate"><div class="src">全国調査</div>
+      ${v!=null?`<div class="n">${v}%</div><div class="t">が本来の意味を選びました</div>${guessRow(guess,gap(guess,v))}`:''}
+      <div class="cite">${esc(source)}</div></div>`;
+  }
+  if(rate.mode==='few') return `<div class="rate"><div class="src">みんな（今日ここまで）</div>
+    <div class="n" style="font-size:24px">${rate.n}人中 ${rate.ok}人</div><div class="t">が正解しました</div>
+    ${guessRow(guess,gap(guess,Math.round(rate.ok/rate.n*100)))}
+    <div class="cite">まだ人数が少ないので、割合ではなく人数で出しています。</div></div>`;
+  if(rate.mode==='pct') return `<div class="rate"><div class="src">みんな</div>
+    <div class="n">${rate.rate}%</div><div class="t">が正解しました（${rate.n}人が回答）</div>
+    ${guessRow(guess,gap(guess,rate.rate))}</div>`;
+  return `<div class="rate tomorrow"><div class="src">よそうの答え合わせ</div>
+    <div class="n">正答率は明日わかります</div>${guessRow(guess,0,'明日ここで')}
+    <div class="cite">今日みんなが解き終わってから確定します。明日この画面を開くと結果が出ています。</div></div>`;
+}
+
+async function main(){
+  const r=await get({action:'today',uid:D.uid||''});
+  if(!r.ok||!r.question){ app.innerHTML=`<div class="card"><div class="done"><div class="m">今日の1問はお休みです</div><div class="s">また明日ひらいてみてください。</div></div></div>`; return }
+  post({action:'event',uid:D.uid,event:'open',detail:r.question.id});
+  const Q=r.question;
+  if(r.answered && S.pick===null){ S.guess=r.answered.guess; S.pick=r.answered.choice;
+    const rv=await get({action:'reveal',uid:D.uid}); if(rv.ok) S.reveal=rv; }
+
+  let h=`<div class="card"><div class="eyebrow">今日の1問</div>
+    <p class="q">${esc(Q.question)}</p><div class="meta">${esc(Q.unit)}／目安30秒</div>`;
+  if(S.guess===null){
+    h+=`<div class="hintbox"><b>まず予想してください。</b><br>この問題、みんなの何%が正解したと思いますか。</div>
+      <div class="guess">${[20,40,60,80].map(v=>`<button data-g="${v}">${v}%</button>`).join('')}</div>`;
+  }else{
+    const ai=S.reveal?S.reveal.answer_index:null;
+    h+=Q.choices.map((c,i)=>{
+      let cls='ch';
+      if(S.pick!==null&&ai!=null){ cls+= i===ai?' ok': i===S.pick?' no':' dim' }
+      return `<button class="${cls}" data-c="${i}" ${S.pick!==null?'disabled':''}>${esc(c)}${ai===i?' <b>正解</b>':''}</button>`
+    }).join('');
+    if(S.pick===null) h+=`<div class="hintbox">💡 ${esc(Q.hint)}</div>`;
+  }
+  h+=`</div>`;
+
+  if(S.reveal){
+    const ok=S.pick===S.reveal.answer_index;
+    h+=`<div class="card"><div class="res ${ok?'ok':'no'}"><div class="big">${ok?'正解':'おしい'}</div></div>
+      ${rateBox(S.reveal.rate,S.guess,Q.source)}
+      <div class="exp">${esc(S.reveal.explain)}</div>
+      ${Q.bridge_unit?`<div class="bridge">🔖 この考え方は「${esc(Q.bridge_unit)}」につながります</div>`:''}
+      <button class="report" id="rep">この問題・解説、おかしいかも？</button></div>`;
+  }
+
+  const left=daysLeft(), rem=Math.max(0,(D.n||0)-(D.done||0));
+  h+=`<div class="goalcard"><div class="lab">${esc(D.goalName)}まで</div>
+    ${left!=null?`<div class="cd"><b>${left}</b><span>日</span></div>`:`<div class="cd"><b>${rem}</b><span>回のこり</span></div>`}
+    <div class="unit">いま：${esc(D.unit)}</div><div class="gsplit"></div>
+    ${left!=null&&left<=7&&rem>0?`<div class="urg">あと${left}日で、授業がまだ${rem}回のこっています。そろそろ日程を決めましょう。</div>`:''}
+    <div class="dots">${Array.from({length:D.n},(_,i)=>`<div class="dot ${i<D.done?'on':''}" data-i="${i}">${i+1}</div>`).join('')}
+      <div class="rem">先生とあと ${rem} 回</div></div>
+    <button class="book" id="book">次の1回を予約する</button></div>`;
+
+  if(S.reveal) h+=`<div class="card done"><div class="m">今日はここまで</div>
+    <div class="s">明日の1問は、朝に届きます。</div></div>`;
+
+  app.innerHTML=h;
+
+  app.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{S.guess=+b.dataset.g;main()});
+  app.querySelectorAll('[data-c]').forEach(b=>b.onclick=async()=>{
+    S.pick=+b.dataset.c;
+    const res=await post({action:'answer',uid:D.uid,choice:S.pick,guess:S.guess,ms:0});
+    if(res.ok) S.reveal=res;
+    main(); setTimeout(()=>window.scrollTo({top:280,behavior:'smooth'}),60);
+  });
+  app.querySelectorAll('.dot').forEach(el=>el.onclick=()=>{
+    const i=+el.dataset.i; D.done=(i+1===D.done)?i:i+1; save();
+    post({action:'save_goal',uid:D.uid,goal_type:D.goal,goal_name:D.goalName,
+          target_date:D.date||'',unit:D.unit,n_needed:D.n,n_done:D.done});
+    main();
+  });
+  $('#book').onclick=()=>{ post({action:'event',uid:D.uid,event:'book_click',detail:D.unit}); location.href=BOOK_URL };
+  const rp=$('#rep'); if(rp) rp.onclick=()=>{
+    const t=prompt('どこが気になりましたか？\n※ いただいた内容は運営が確認して直します');
+    if(t){ post({action:'report',uid:D.uid,question_id:Q.id,body:t}); alert('ありがとうございます。確認して直します。') }
+  };
+}
+
+load();
+if(D.uid && D.unit) main(); else setup(1);
+</script>
+</body>
+</html>
