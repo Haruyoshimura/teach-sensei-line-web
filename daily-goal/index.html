@@ -54,6 +54,7 @@
   .goalcard .streak{font-size:13px;font-weight:700;opacity:.9;margin-top:2px}
   .unitline{display:block;width:100%;text-align:left;margin-top:10px;padding:10px 12px;border:1px dashed rgba(255,255,255,.45);background:rgba(255,255,255,.1);border-radius:11px;color:#fff;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer}
   .gsplit{border-top:1px solid rgba(255,255,255,.25);margin:14px 0 12px}
+  .backlink{display:block;width:100%;margin-top:18px;background:none;border:none;color:var(--sub);font-size:13px;font-weight:700;font-family:inherit;text-decoration:underline;cursor:pointer;padding:8px}
   .dots{display:flex;gap:7px;align-items:center;margin-bottom:12px}
   .dot{width:24px;height:24px;border-radius:99px;border:2px solid rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;cursor:pointer}
   .dot.on{background:#fff;color:var(--brand-d);border-color:#fff}
@@ -160,12 +161,43 @@ function setup(step){
   if(step===1){
     app.innerHTML=bar+`<h1>何に向けて、がんばる？</h1>
       <p class="lead">ひとつ選んでください。あとから変えられます。</p>
-      ${GOALS.map(g=>`<button class="opt" data-g="${g.id}">${g.t}<small>${g.s}</small></button>`).join('')}`;
+      ${GOALS.map(g=>`<button class="opt" data-g="${g.id}">${g.t}<small>${g.s}</small></button>`).join('')}
+      <button class="backlink" id="rest">前に使ったことがあります</button>`;
     app.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{
       t.goal=b.dataset.g; t.goalName=GOALS.find(x=>x.id===t.goal).t;
       ev('goal_pick', t.goal);
       setup(GOALS.find(x=>x.id===t.goal).date?2:3);
     });
+    $('#rest').onclick=()=>{ ev('restore_open',''); setup('back') };
+  }
+  /* 端末の保存が消えた人が、メールだけで元に戻る画面。
+     機種変・別ブラウザ・iOSの7日ルールで消えたとき用。ゴールから作り直させない。 */
+  if(step==='back'){
+    app.innerHTML=`<h1>おかえりなさい</h1>
+      <p class="lead">前に入れたメールアドレスを教えてください。<br>ゴールと進み具合をそのまま戻します。</p>
+      <input type="email" id="em" placeholder="you@example.com">
+      <div class="hint" id="msg">新しく設定しなおす必要はありません。</div>
+      <div style="height:20px"></div>
+      <button class="btn" id="nx">戻す</button>
+      <button class="btn ghost" id="bk">はじめて使います</button>`;
+    $('#nx').onclick=async()=>{
+      const e=$('#em').value.trim();
+      if(!/^[^@\s]+@[^@\s]+\.[a-zA-Z]{2,}$/.test(e)){$('#em').focus();return}
+      $('#nx').disabled=true; $('#nx').textContent='…';
+      const r=await post({action:'lookup',email:e,aid:aid(),src:D.src||SRC||''});
+      $('#nx').disabled=false; $('#nx').textContent='戻す';
+      if(!r.ok){
+        $('#msg').innerHTML='そのアドレスでは見つかりませんでした。<br>別のアドレスを試すか、「はじめて使います」に進んでください。';
+        return;
+      }
+      D={uid:r.uid, email:e, aid:D.aid, src:D.src||SRC||'',
+         goal:(r.goal&&r.goal.goal_type)||'', goalName:(r.goal&&r.goal.goal_name)||'',
+         date:r.goal?ymd(r.goal.target_date):null, unit:(r.goal&&r.goal.unit)||''};
+      save();
+      if(D.goalName) main();      // ゴールも戻った
+      else setup(1);              // 登録はあるがゴール未設定だった人
+    };
+    $('#bk').onclick=()=>setup(1);
   }
   if(step===2){
     const g=GOALS.find(x=>x.id===t.goal);
