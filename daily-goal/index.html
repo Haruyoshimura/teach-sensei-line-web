@@ -51,7 +51,8 @@
   .goalcard .cd{display:flex;align-items:baseline;gap:6px;margin:6px 0 2px}
   .goalcard .cd b{font-size:38px;font-weight:800;line-height:1}
   .goalcard .cd span{font-size:14px;font-weight:700;opacity:.9}
-  .goalcard .unit{font-size:15px;font-weight:700;margin-top:8px}
+  .goalcard .streak{font-size:13px;font-weight:700;opacity:.9;margin-top:2px}
+  .unitline{display:block;width:100%;text-align:left;margin-top:10px;padding:10px 12px;border:1px dashed rgba(255,255,255,.45);background:rgba(255,255,255,.1);border-radius:11px;color:#fff;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer}
   .gsplit{border-top:1px solid rgba(255,255,255,.25);margin:14px 0 12px}
   .dots{display:flex;gap:7px;align-items:center;margin-bottom:12px}
   .dot{width:24px;height:24px;border-radius:99px;border:2px solid rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;cursor:pointer}
@@ -108,8 +109,8 @@ const GOALS=[
   {id:'exam', t:'検定', s:'英検・漢検・数検', date:true, hint:'一次試験の日を入れてください'},
   {id:'entr', t:'入試', s:'受験本番', date:true, hint:'第一志望の入試日を入れてください'},
   {id:'hw',   t:'提出物・宿題', s:'いちばん短いゴール', date:true, hint:'提出日を入れてください'},
-  {id:'weak', t:'苦手をなくす', s:'期日なし。回数で進みます', date:false, hint:''},
-  {id:'catch',t:'学校に迴いつく', s:'期日なし。回数で進みます', date:false, hint:''}
+  {id:'weak', t:'苦手をなくす', s:'期日なし。毎日つづけます', date:false, hint:''},
+  {id:'catch',t:'学校に追いつく', s:'期日なし。毎日つづけます', date:false, hint:''}
 ];
 
 let D={}, S={guess:null, pick:null, reveal:null, tmp:{}};
@@ -119,6 +120,23 @@ const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','
 const today=()=>new Date().toISOString().slice(0,10);
 function load(){ try{D=JSON.parse(localStorage.getItem(LS))||{}}catch(e){D={}} }
 function save(){ try{localStorage.setItem(LS,JSON.stringify(D))}catch(e){} }
+
+/* ====== URLパラメータ ======
+ *  ?uid=xxx … localStorageが消えた人を戻すための復帰リンク（保存より優先）
+ *  ?src=xxx … どのバナー・どの通知から来たか（例 ?src=top / ?src=mid / ?src=mail） */
+const QP=new URLSearchParams(location.search);
+const SRC=(QP.get('src')||'').slice(0,24);
+const QUID=(QP.get('uid')||'').slice(0,32);
+
+/* 未登録の人にも端末側でIDを持たせる。これが無いと「来て、登録せず帰った人」が1行も残らない。
+   登録できたら identify の detail にこのIDを送るので、登録前後が1本に繋がる。 */
+function aid(){
+  if(!D.aid){ D.aid='a'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-6); save() }
+  return D.aid;
+}
+function ev(name, detail){
+  post({action:'event', uid:D.uid||'', aid:aid(), event:name, detail:detail||'', src:D.src||SRC||''});
+}
 
 async function post(body){
   if(!GAS_URL) return {ok:true, ...(body.action==='answer'?SAMPLE:{}), uid:'sample'};
@@ -137,7 +155,7 @@ async function get(params){
 
 /* ====== セットアップ ====== */
 function setup(step){
-  const bar=`<div class="steps">${[1,2,3,4].map(i=>`<i class="${i<=step?'on':''}"></i>`).join('')}</div>`;
+  const bar=`<div class="steps">${[1,2,3].map(i=>`<i class="${i<=step?'on':''}"></i>`).join('')}</div>`;
   const t=S.tmp;
   if(step===1){
     app.innerHTML=bar+`<h1>何に向けて、がんばる？</h1>
@@ -145,6 +163,7 @@ function setup(step){
       ${GOALS.map(g=>`<button class="opt" data-g="${g.id}">${g.t}<small>${g.s}</small></button>`).join('')}`;
     app.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{
       t.goal=b.dataset.g; t.goalName=GOALS.find(x=>x.id===t.goal).t;
+      ev('goal_pick', t.goal);
       setup(GOALS.find(x=>x.id===t.goal).date?2:3);
     });
   }
@@ -155,23 +174,11 @@ function setup(step){
       <input type="date" id="dt" value="${t.date||''}">
       <div class="hint">${g.hint}</div><div style="height:20px"></div>
       <button class="btn" id="nx">次へ</button><button class="btn ghost" id="bk">もどる</button>`;
-    $('#nx').onclick=()=>{const v=$('#dt').value; if(!v){$('#dt').focus();return} t.date=v; setup(3)};
+    $('#nx').onclick=()=>{const v=$('#dt').value; if(!v){$('#dt').focus();return} t.date=v; ev('date_set',v); setup(3)};
     $('#bk').onclick=()=>setup(1);
   }
   if(step===3){
-    app.innerHTML=bar+`<h1>いま、どこをやってる？</h1>
-      <p class="lead">単元の名前で書いてください。<br>「一次関数のグラフ」「旅人算」のように。</p>
-      <input type="text" id="unit" placeholder="例：一次関数のグラフ" value="${esc(t.unit||'')}">
-      <label>そこまで、先生とあと何回？</label>
-      <div class="cnt">${[1,2,3,4,5].map(n=>`<button data-n="${n}" class="${t.n==n?'sel':''}">${n}</button>`).join('')}</div>
-      <div class="hint">迷ったら2回。あとから変えられます。</div><div style="height:20px"></div>
-      <button class="btn" id="nx">次へ</button><button class="btn ghost" id="bk">もどる</button>`;
-    app.querySelectorAll('.cnt button').forEach(b=>b.onclick=()=>{
-      t.n=+b.dataset.n; app.querySelectorAll('.cnt button').forEach(x=>x.classList.remove('sel')); b.classList.add('sel')});
-    $('#nx').onclick=()=>{const u=$('#unit').value.trim(); if(!u){$('#unit').focus();return} t.unit=u; t.n=t.n||2; setup(4)};
-    $('#bk').onclick=()=>setup(GOALS.find(x=>x.id===t.goal).date?2:1);
-  }
-  if(step===4){
+    ev('setup_email','');
     app.innerHTML=bar+`<h1>あと少しです</h1>
       <p class="lead">つづきをいつでも開けるように、<br>Teachに登録しているメールアドレスを教えてください。</p>
       <input type="email" id="em" placeholder="you@example.com" value="${esc(t.email||'')}">
@@ -182,20 +189,21 @@ function setup(step){
       const e=$('#em').value.trim();
       if(!/^[^@\s]+@[^@\s]+\.[a-zA-Z]{2,}$/.test(e)){$('#em').focus();return}
       $('#nx').disabled=true; $('#nx').textContent='…';
-      const r=await post({action:'identify',email:e});
+      const r=await post({action:'identify',email:e,aid:aid(),src:D.src||SRC||''});
       if(!r.ok){ $('#nx').disabled=false; $('#nx').textContent='はじめる'; alert('うまく登録できませんでした。もう一度お試しください。'); return }
-      D={uid:r.uid, email:e, goal:t.goal, goalName:t.goalName, date:t.date||null,
-         unit:t.unit, n:t.n, done:0, lastDone:null};
+      D={uid:r.uid, email:e, goal:t.goal, goalName:t.goalName, date:t.date||null, unit:'', aid:D.aid, src:D.src||SRC||''};
       save();
       await post({action:'save_goal',uid:D.uid,goal_type:D.goal,goal_name:D.goalName,
-                  target_date:D.date||'',unit:D.unit,n_needed:D.n,n_done:0});
+                  target_date:D.date||'',unit:'',n_needed:0,n_done:0});
       main();
     };
-    $('#bk').onclick=()=>setup(3);
+    $('#bk').onclick=()=>setup(GOALS.find(x=>x.id===t.goal).date?2:1);
   }
 }
 
 /* ====== メイン ====== */
+function ymd(v){ if(!v) return null; const d=new Date(v); return isNaN(d)?String(v).slice(0,10):
+  d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0') }
 function daysLeft(){ if(!D.date) return null; return Math.ceil((new Date(D.date+'T23:59:59')-new Date())/86400000) }
 function gap(g,a){ return Math.abs(g-a) }
 function guessRow(g,d,label){
@@ -228,7 +236,15 @@ function rateBox(rate,guess,source){
 async function main(){
   const r=await get({action:'today',uid:D.uid||''});
   if(!r.ok||!r.question){ app.innerHTML=`<div class="card"><div class="done"><div class="m">今日の1問はお休みです</div><div class="s">また明日ひらいてみてください。</div></div></div>`; return }
-  post({action:'event',uid:D.uid,event:'open',detail:r.question.id});
+  if(!S.opened){ S.opened=true; ev('open', r.question.id); S.t0=Date.now(); }  // 1回の来訪で1行だけ。再描画では飛ばさない
+
+  /* ?uid= で戻ってきた人は端末側にゴールが残っていない。サーバーの goals から書き戻す。
+     これが無いと、復帰した人が「ゴール名なし・期日なし」の画面に落ちる。 */
+  if(r.goal && !D.goalName){
+    D.goal=r.goal.goal_type||''; D.goalName=r.goal.goal_name||'';
+    D.date=ymd(r.goal.target_date); D.unit=r.goal.unit||'';
+    save();
+  }
   const Q=r.question;
   if(r.answered && S.pick===null){ S.guess=r.answered.guess; S.pick=r.answered.choice;
     const rv=await get({action:'reveal',uid:D.uid}); if(rv.ok) S.reveal=rv; }
@@ -258,34 +274,37 @@ async function main(){
       <button class="report" id="rep">この問題・解説、おかしいかも？</button></div>`;
   }
 
-  const left=daysLeft(), rem=Math.max(0,(D.n||0)-(D.done||0));
-  h+=`<div class="goalcard"><div class="lab">${esc(D.goalName)}まで</div>
-    ${left!=null?`<div class="cd"><b>${left}</b><span>日</span></div>`:`<div class="cd"><b>${rem}</b><span>回のこり</span></div>`}
-    <div class="unit">いま：${esc(D.unit)}</div><div class="gsplit"></div>
-    ${left!=null&&left<=7&&rem>0?`<div class="urg">あと${left}日で、授業がまだ${rem}回のこっています。そろそろ日程を決めましょう。</div>`:''}
-    <div class="dots">${Array.from({length:D.n},(_,i)=>`<div class="dot ${i<D.done?'on':''}" data-i="${i}">${i+1}</div>`).join('')}
-      <div class="rem">先生とあと ${rem} 回</div></div>
-    <button class="book" id="book">次の1回を予約する</button></div>`;
+  const left=daysLeft(), st=Number(r.streak||0);
+  h+=`<div class="goalcard"><div class="lab">${esc(D.goalName)}${left!=null?'まで':''}</div>
+    ${left!=null?`<div class="cd"><b>${left}</b><span>日</span></div>`
+                :`<div class="cd"><b>${st}</b><span>日つづいています</span></div>`}
+    ${left!=null?`<div class="streak">${st>0?`つづけて ${st} 日`:'今日から数えはじめます'}</div>`:''}
+    <button class="unitline" id="unitline">${D.unit?`いま：${esc(D.unit)}`:'＋ いま取り組んでいることを書く'}</button>
+    <div class="gsplit"></div>
+    ${left!=null&&left<=7?`<div class="urg">あと${left}日です。ひっかかっているところがあるなら、いまのうちに。</div>`:''}
+    <button class="book" id="book">わからないところを先生と1回みてもらう</button></div>`;
 
   if(S.reveal) h+=`<div class="card done"><div class="m">今日はここまで</div>
     <div class="s">明日の1問は、朝に届きます。</div></div>`;
 
   app.innerHTML=h;
 
-  app.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{S.guess=+b.dataset.g;main()});
+  app.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{S.guess=+b.dataset.g;ev('guess',String(S.guess));main()});
   app.querySelectorAll('[data-c]').forEach(b=>b.onclick=async()=>{
     S.pick=+b.dataset.c;
-    const res=await post({action:'answer',uid:D.uid,choice:S.pick,guess:S.guess,ms:0});
+    const res=await post({action:'answer',uid:D.uid,choice:S.pick,guess:S.guess,ms:S.t0?Date.now()-S.t0:0});
     if(res.ok) S.reveal=res;
     main(); setTimeout(()=>window.scrollTo({top:280,behavior:'smooth'}),60);
   });
-  app.querySelectorAll('.dot').forEach(el=>el.onclick=()=>{
-    const i=+el.dataset.i; D.done=(i+1===D.done)?i:i+1; save();
+  $('#unitline').onclick=()=>{
+    const v=prompt('いま取り組んでいることは？\n※ 書かなくても使えます。あとから変えられます。', D.unit||'');
+    if(v===null) return;
+    D.unit=v.trim(); save();
     post({action:'save_goal',uid:D.uid,goal_type:D.goal,goal_name:D.goalName,
-          target_date:D.date||'',unit:D.unit,n_needed:D.n,n_done:D.done});
+          target_date:D.date||'',unit:D.unit,n_needed:0,n_done:0});
     main();
-  });
-  $('#book').onclick=()=>{ post({action:'event',uid:D.uid,event:'book_click',detail:D.unit}); location.href=BOOK_URL };
+  };
+  $('#book').onclick=()=>{ ev('book_click', D.unit||''); location.href=BOOK_URL };
   const rp=$('#rep'); if(rp) rp.onclick=()=>{
     const t=prompt('どこが気になりましたか？\n※ いただいた内容は運営が確認して直します');
     if(t){ post({action:'report',uid:D.uid,question_id:Q.id,body:t}); alert('ありがとうございます。確認して直します。') }
@@ -293,7 +312,10 @@ async function main(){
 }
 
 load();
-if(D.uid && D.unit) main(); else setup(1);
+if(QUID && QUID!==D.uid){ D.uid=QUID; save() }   // 復帰リンク。保存されている値より優先する
+if(SRC && !D.src){ D.src=SRC; save() }           // 流入元は初回だけ覚える
+ev('land', D.uid?'return':'new');                // ★登録前の人もここで1行残る
+if(D.uid) main(); else setup(1);
 </script>
 </body>
 </html>
