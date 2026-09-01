@@ -81,6 +81,27 @@
   .steps{display:flex;gap:6px;margin-bottom:18px}
   .steps i{flex:1;height:3px;background:var(--line);border-radius:99px}
   .steps i.on{background:var(--brand)}
+
+  /* ====== 押した感触 ======
+     先頭で -webkit-tap-highlight-color:transparent を全要素にかけている＝
+     スマホ標準のタップ反応を消しているので、代わりを必ずここで用意する。
+     これが無いと「押しても何も起きない」ように見える。 */
+  button{transition:transform .06s ease,background-color .12s ease,border-color .12s ease,opacity .12s ease;
+         touch-action:manipulation}
+  button:active{transform:scale(.975)}
+  .ch:active,.opt:active{background:#eaf4f2;border-color:var(--brand)}
+  .guess button:active{background:var(--brand);border-color:var(--brand);color:#fff}
+  .btn:active{filter:brightness(.9)}
+  .book:active{background:#e6f5f3}
+  .unitline:active{background:rgba(255,255,255,.26)}
+  .report:active,.backlink:active{background:#eef2f4}
+  button:disabled{transform:none}
+
+  /* 採点が返ってくるまでの「いま選んだのはこれ」表示。
+     正解が分かる前なので、正誤の色ではなくブランド色で「選択中」だけを示す。 */
+  .ch.sel{border-color:var(--brand);background:var(--brand-l);color:var(--brand-d)}
+  .ch.sel::after{content:'採点中…';float:right;font-size:12px;font-weight:700;opacity:.8}
+  .ch.wait{opacity:.4}
 </style>
 </head>
 <body>
@@ -307,11 +328,15 @@ function render(){
     const ai=S.reveal?S.reveal.answer_index:null;
     h+=Q.choices.map((c,i)=>{
       let cls='ch';
-      if(S.pick!==null&&ai!=null){ cls+= i===ai?' ok': i===S.pick?' no':' dim' }
+      if(ai!=null){                       // 採点が返った：正誤で色分け
+        cls+= i===ai?' ok': i===S.pick?' no':' dim';
+      }else if(S.pick!==null){            // 採点待ち：押したものだけ「選択中」にする
+        cls+= i===S.pick?' sel':' wait';
+      }
       return `<button class="${cls}" data-c="${i}" ${S.pick!==null?'disabled':''}>${esc(c)}${ai===i?' <b>正解</b>':''}</button>`
     }).join('');
     if(S.pick===null) h+=`<div class="hintbox">💡 ${esc(Q.hint)}</div>`;
-    if(S.grading) h+=`<div class="hintbox">採点しています…</div>`;
+    if(S.grading) h+=`<div class="hintbox">みんなの正答率と解説を取りにいっています…</div>`;
   }
   h+=`</div>`;
 
