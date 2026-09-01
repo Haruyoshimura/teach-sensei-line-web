@@ -265,9 +265,14 @@ function rateBox(rate,guess,source){
     <div class="cite">今日みんなが解き終わってから確定します。明日この画面を開くと結果が出ています。</div></div>`;
 }
 
+/* ====== 取得は1回だけ。描画は下の render() が state だけを見て何度でもやる ======
+   以前は main() が「毎回サーバーに聞いてから描く」形だったので、
+   予想を選ぶだけで約3秒待たされていた（サーバーの情報は要らないのに）。 */
 async function main(){
+  app.innerHTML=`<div class="card"><div class="done"><div class="m">読み込んでいます…</div></div></div>`;
   const r=await get({action:'today',uid:D.uid||''});
   if(!r.ok||!r.question){ app.innerHTML=`<div class="card"><div class="done"><div class="m">今日の1問はお休みです</div><div class="s">また明日ひらいてみてください。</div></div></div>`; return }
+  S.data=r;
   if(!S.opened){ S.opened=true; ev('open', r.question.id); S.t0=Date.now(); }  // 1回の来訪で1行だけ。再描画では飛ばさない
 
   /* ?uid= で戻ってきた人は端末側にゴールが残っていない。サーバーの goals から書き戻す。
@@ -277,9 +282,21 @@ async function main(){
     D.date=ymd(r.goal.target_date); D.unit=r.goal.unit||'';
     save();
   }
+  /* 昨日までに答えている人。以前はここで reveal を直列に待っていたので、
+     開くだけで往復2回＝約6秒かかっていた。先に画面を出してから裏で取りに行く。 */
+  if(r.answered && S.pick===null){
+    S.guess=r.answered.guess; S.pick=r.answered.choice;
+    render();
+    const rv=await get({action:'reveal',uid:D.uid});
+    if(rv.ok){ S.reveal=rv; render(); }
+    return;
+  }
+  render();
+}
+
+function render(){
+  const r=S.data; if(!r||!r.question) return;
   const Q=r.question;
-  if(r.answered && S.pick===null){ S.guess=r.answered.guess; S.pick=r.answered.choice;
-    const rv=await get({action:'reveal',uid:D.uid}); if(rv.ok) S.reveal=rv; }
 
   let h=`<div class="card"><div class="eyebrow">今日の1問</div>
     <p class="q">${esc(Q.question)}</p><div class="meta">${esc(Q.unit)}／目安30秒</div>`;
@@ -294,6 +311,7 @@ async function main(){
       return `<button class="${cls}" data-c="${i}" ${S.pick!==null?'disabled':''}>${esc(c)}${ai===i?' <b>正解</b>':''}</button>`
     }).join('');
     if(S.pick===null) h+=`<div class="hintbox">💡 ${esc(Q.hint)}</div>`;
+    if(S.grading) h+=`<div class="hintbox">採点しています…</div>`;
   }
   h+=`</div>`;
 
@@ -321,20 +339,30 @@ async function main(){
 
   app.innerHTML=h;
 
-  app.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{S.guess=+b.dataset.g;ev('guess',String(S.guess));main()});
+  /* 予想の選択：サーバーに聞くことは何も無いので、その場で描き直すだけ（体感ゼロ秒）。
+     イベント送信は待たずに投げっぱなしにする。 */
+  app.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{
+    S.guess=+b.dataset.g; ev('guess',String(S.guess)); render();
+  });
+  /* 解答：正解と解説はサーバーからしか来ないので往復1回は避けられない。
+     ただし押した瞬間に「選ばれた」ことを見せて、採点中だと分かるようにする。 */
   app.querySelectorAll('[data-c]').forEach(b=>b.onclick=async()=>{
+    if(S.pick!==null) return;
     S.pick=+b.dataset.c;
+    S.grading=true; render();
     const res=await post({action:'answer',uid:D.uid,choice:S.pick,guess:S.guess,ms:S.t0?Date.now()-S.t0:0});
-    if(res.ok) S.reveal=res;
-    main(); setTimeout(()=>window.scrollTo({top:280,behavior:'smooth'}),60);
+    S.grading=false;
+    if(res.ok) S.reveal=res; else S.pick=null;   // 失敗したら選び直せるように戻す
+    render();
+    if(res.ok) setTimeout(()=>window.scrollTo({top:280,behavior:'smooth'}),60);
   });
   $('#unitline').onclick=()=>{
     const v=prompt('いま取り組んでいることは？\n※ 書かなくても使えます。あとから変えられます。', D.unit||'');
     if(v===null) return;
     D.unit=v.trim(); save();
+    render();   // 先に画面へ反映。保存は裏で走らせる（待たせない）
     post({action:'save_goal',uid:D.uid,goal_type:D.goal,goal_name:D.goalName,
           target_date:D.date||'',unit:D.unit,n_needed:0,n_done:0});
-    main();
   };
   $('#book').onclick=()=>{ ev('book_click', D.unit||''); location.href=BOOK_URL };
   const rp=$('#rep'); if(rp) rp.onclick=()=>{
